@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #f8f9fa; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  canvas { display: block; width: 1920px; height: 1080px; }
+</style>
+<!-- motion_kit.js -->
+<script src="motion_kit.js"></script>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+
+<script>
+const c = document.getElementById('c').getContext('2d');
+const vis = (t, a, b, f = .35) => seg(t, a, a + f) * (1 - seg(t, b - f, b));
+
+// Card Data inspired by studio team showcase
+const CARDS = [
+  { id: '#01', name: 'Maya Bennett', role: 'Creative Director', col: '#d946ef', avatarBg: '#fdf4ff' },
+  { id: '#02', name: 'Leo Carter', role: 'Motion Designer', col: '#6366f1', isHolo: true },
+  { id: '#03', name: 'Noah Williams', role: 'Product Designer', col: '#f59e0b', avatarBg: '#fef3c7' },
+  { id: '#04', name: 'Amina Yusuf', role: 'Brand Designer', col: '#10b981', avatarBg: '#ecfdf5' }
+];
+
+function drawStudioBackground(t) {
+  // Clean minimal studio backdrop
+  c.fillStyle = '#fafafb';
+  c.fillRect(0, 0, 1920, 1080);
+
+  // Subtle studio light vignette
+  const g = c.createRadialGradient(960, 400, 200, 960, 540, 1200);
+  g.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+  g.addColorStop(1, 'rgba(240, 242, 245, 0.6)');
+  c.fillStyle = g;
+  c.fillRect(0, 0, 1920, 1080);
+
+  // Studio Header
+  c.font = '600 48px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  c.fillStyle = '#111827';
+  c.fillText('Meet the people', 120, 110);
+  c.fillStyle = '#818cf8';
+  c.fillText('behind the work.', 120, 170);
+
+  c.font = '400 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  c.fillStyle = '#6b7280';
+  c.fillText('Different minds, shared curiosity. A small team', 1420, 110);
+  c.fillText('making thoughtful digital platforms together.', 1420, 136);
+
+  c.fillStyle = '#10b981';
+  c.beginPath(); c.arc(1425, 170, 4, 0, Math.PI * 2); c.fill();
+  c.font = '700 13px -apple-system, monospace';
+  c.fillText('04 PEOPLE, ONE TEAM', 1440, 175);
+}
+
+function drawHangingString(t) {
+  // Hanging suspension cord across the viewport
+  c.save();
+  c.strokeStyle = '#d1d5db';
+  c.lineWidth = 2;
+  c.beginPath();
+  c.moveTo(60, 290);
+  c.bezierCurveTo(550, 315, 1350, 315, 1860, 290);
+  c.stroke();
+  c.restore();
+}
+
+function drawHoloCard(card, index, t) {
+  const baseX = 240 + index * 400;
+  // Cable attachment point along bezier cord
+  const cableX = baseX + 150;
+  const cordY = 295 + Math.sin((index + 1) * 0.7) * 12;
+
+  // Spring physics pendulum sway
+  const swayAngle = Math.sin(t * 1.8 + index * 1.2) * 0.045 + (index === 1 ? -0.06 : 0.02);
+  const cardW = 320, cardH = 460;
+
+  c.save();
+  c.translate(cableX, cordY);
+
+  // Draw metal clip / lanyard ring
+  c.fillStyle = '#9ca3af';
+  c.fillRect(-8, 0, 16, 22);
+  c.strokeStyle = '#6b7280';
+  c.lineWidth = 1.5;
+  c.strokeRect(-8, 0, 16, 22);
+
+  c.fillStyle = '#4b5563';
+  c.beginPath(); c.arc(0, 11, 4, 0, Math.PI * 2); c.fill();
+
+  // Rotate card around hanging point
+  c.rotate(swayAngle);
+
+  // Soft directional drop shadow
+  c.shadowColor = 'rgba(15, 23, 42, 0.08)';
+  c.shadowBlur = 24;
+  c.shadowOffsetX = 8;
+  c.shadowOffsetY = 18;
+
+  // Card background
+  const cx = -cardW / 2;
+  const cy = 24;
+
+  if (card.isHolo) {
+    // Iridescent holographic foil gradient
+    const holoGrad = c.createLinearGradient(cx, cy, cx + cardW, cy + cardH);
+    const hShift = (t * 0.4) % 1;
+    holoGrad.addColorStop(0, `hsl(${(hShift * 360) % 360}, 80%, 94%)`);
+    holoGrad.addColorStop(0.35, `hsl(${((hShift + 0.3) * 360) % 360}, 90%, 92%)`);
+    holoGrad.addColorStop(0.7, `hsl(${((hShift + 0.6) * 360) % 360}, 85%, 95%)`);
+    holoGrad.addColorStop(1, `hsl(${((hShift + 0.9) * 360) % 360}, 80%, 93%)`);
+    c.fillStyle = holoGrad;
+  } else {
+    c.fillStyle = '#ffffff';
+  }
+
+  // Rounded card frame
+  rr(c, cx, cy, cardW, cardH, 20);
+  c.fill();
+
+  // Reset shadow for card contents
+  c.shadowColor = 'transparent';
+  c.strokeStyle = card.isHolo ? 'rgba(255, 255, 255, 0.8)' : '#f3f4f6';
+  c.lineWidth = 1.5;
+  rr(c, cx, cy, cardW, cardH, 20);
+  c.stroke();
+
+  // Card Header Meta
+  c.font = '700 11px -apple-system, monospace';
+  c.fillStyle = '#9ca3af';
+  c.fillText('PEOPLE • STUDIO', cx + 24, cy + 38);
+  c.fillText(card.id, cx + cardW - 48, cy + 38);
+
+  if (card.isHolo) {
+    // Flipped / detailed bio card style
+    c.font = '700 22px -apple-system, sans-serif';
+    c.fillStyle = '#111827';
+    c.fillText(card.name, cx + 24, cy + 100);
+
+    c.font = '500 14px -apple-system, sans-serif';
+    c.fillStyle = '#6b7280';
+    c.fillText(card.role, cx + 24, cy + 125);
+    c.fillText('📍 Alexandria / Berlin', cx + 24, cy + 155);
+
+    c.font = '400 14px -apple-system, sans-serif';
+    c.fillStyle = '#374151';
+    c.fillText('“Crafting fluid interactions that feel alive.”', cx + 24, cy + 205);
+
+    // QR Code simulation
+    c.fillStyle = '#111827';
+    c.fillRect(cx + cardW - 90, cy + cardH - 95, 68, 68);
+    c.fillStyle = '#ffffff';
+    c.fillRect(cx + cardW - 84, cy + cardH - 89, 56, 56);
+    c.fillStyle = '#111827';
+    c.fillRect(cx + cardW - 76, cy + cardH - 81, 40, 40);
+
+    c.font = '700 10px -apple-system, monospace';
+    c.fillStyle = '#6b7280';
+    c.fillText('SCAN PROFILE', cx + 24, cy + cardH - 32);
+  } else {
+    // 3D Avatar clay container
+    c.fillStyle = card.avatarBg;
+    rr(c, cx + 24, cy + 54, cardW - 48, 240, 16);
+    c.fill();
+
+    // Stylized 3D character silhouette / portrait
+    c.fillStyle = card.col;
+    c.beginPath();
+    c.arc(cx + cardW / 2, cy + 150, 45, 0, Math.PI * 2);
+    c.fill();
+    c.beginPath();
+    c.arc(cx + cardW / 2, cy + 240, 65, Math.PI, Math.PI * 2);
+    c.fill();
+
+    // Name & Role
+    c.font = '700 22px -apple-system, sans-serif';
+    c.fillStyle = '#111827';
+    c.fillText(card.name, cx + 24, cy + 340);
+
+    c.font = '500 15px -apple-system, sans-serif';
+    c.fillStyle = '#6b7280';
+    c.fillText(card.role, cx + 24, cy + 370);
+
+    // View Profile link
+    c.font = '700 11px -apple-system, monospace';
+    c.fillStyle = '#9ca3af';
+    c.fillText('VIEW PROFILE', cx + 24, cy + 425);
+
+    // Mini circle button
+    c.fillStyle = '#111827';
+    c.beginPath(); c.arc(cx + cardW - 40, cy + 420, 14, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#ffffff';
+    c.font = '12px -apple-system, sans-serif';
+    c.fillText('↗', cx + cardW - 45, cy + 424);
+  }
+
+  c.restore();
+}
+
+window.seekTo = function(t) {
+  drawStudioBackground(t);
+  drawHangingString(t);
+
+  for (let i = 0; i < CARDS.length; i++) {
+    drawHoloCard(CARDS[i], i, t);
+  }
+};
+
+window.seekTo(0);
+</script>
+</body>
+</html>

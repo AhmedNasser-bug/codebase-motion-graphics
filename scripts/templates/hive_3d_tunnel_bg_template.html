@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #050507; overflow: hidden; font-family: "Impact", "Arial Black", -apple-system, sans-serif; }
+  #three-container { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; z-index: 1; }
+  #hud-canvas { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; z-index: 2; }
+</style>
+<!-- Three.js for 3D Geometric Wireframe Tunnel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- motion_kit.js for deterministic timeline controls -->
+<script src="motion_kit.js"></script>
+</head>
+<body>
+<div id="three-container"></div>
+<canvas id="c" width="1920" height="1080" style="display:none;"></canvas>
+<canvas id="hud-canvas" width="1920" height="1080"></canvas>
+
+<script>
+// --- Three.js Wireframe Tunnel Inspired by Hive Germany ---
+const container = document.getElementById('three-container');
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x050507, 0.0018);
+
+const camera = new THREE.PerspectiveCamera(65, 1920 / 1080, 1, 3000);
+camera.position.set(0, 0, 1200);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setSize(1920, 1080);
+renderer.setPixelRatio(1);
+container.appendChild(renderer.domElement);
+
+// Tunnel of tumbling geometric wireframe boxes
+const tunnelGroup = new THREE.Group();
+scene.add(tunnelGroup);
+
+const BOX_COUNT = 90;
+const boxes = [];
+const boxGeo = new THREE.BoxGeometry(140, 140, 140);
+const edgesGeo = new THREE.EdgesGeometry(boxGeo);
+
+// Hive coral/peach wireframe palette
+const wireMatCoral = new THREE.LineBasicMaterial({ color: 0xff6b4a, transparent: true, opacity: 0.85, linewidth: 2 });
+const wireMatPeach = new THREE.LineBasicMaterial({ color: 0xff9e7d, transparent: true, opacity: 0.7 });
+const wireMatWhite = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 });
+
+for (let i = 0; i < BOX_COUNT; i++) {
+  const z = -2000 + (i / BOX_COUNT) * 3500;
+  const radius = 260 + (Math.sin(i * 0.4) * 80);
+  const angle = (i * 0.35);
+
+  const mat = i % 5 === 0 ? wireMatWhite : (i % 2 === 0 ? wireMatCoral : wireMatPeach);
+  const wireMesh = new THREE.LineSegments(edgesGeo, mat);
+
+  wireMesh.position.set(
+    Math.cos(angle) * radius,
+    Math.sin(angle) * radius,
+    z
+  );
+  wireMesh.rotation.set(i * 0.2, i * 0.3, i * 0.1);
+  tunnelGroup.add(wireMesh);
+
+  boxes.push({
+    mesh: wireMesh,
+    baseZ: z,
+    rotSpeedX: 0.2 + (i % 3) * 0.15,
+    rotSpeedY: 0.3 + (i % 4) * 0.1,
+    initAngle: angle,
+    radius: radius
+  });
+}
+
+// 2D HUD / Typography Overlay Canvas
+const mainCnv = document.getElementById('c');
+const mainCtx = mainCnv.getContext('2d');
+const hudCnv = document.getElementById('hud-canvas');
+const hudCtx = hudCnv.getContext('2d');
+
+function drawHiveHUD(t) {
+  hudCtx.clearRect(0, 0, 1920, 1080);
+
+  // Top Minimal Navigation Bar
+  hudCtx.fillStyle = 'rgba(5, 5, 7, 0.75)';
+  hudCtx.fillRect(0, 0, 1920, 72);
+
+  hudCtx.font = '900 28px "Arial Black", Impact, sans-serif';
+  hudCtx.fillStyle = '#ff6b4a';
+  hudCtx.fillText('HIVE', 80, 46);
+
+  hudCtx.font = '700 14px "Segoe UI", sans-serif';
+  hudCtx.fillStyle = '#9ca3af';
+  const navItems = ['TIMELINE', 'SHOWCASE', 'AWARDS', 'ARCHITECTURE', 'DOCS'];
+  for (let n = 0; n < navItems.length; n++) {
+    hudCtx.fillText(navItems[n], 400 + n * 180, 44);
+  }
+
+  // Register CTA Button
+  hudCtx.fillStyle = '#ff6b4a';
+  hudCtx.fillRect(1660, 18, 180, 38);
+  hudCtx.font = '700 13px "Segoe UI", sans-serif';
+  hudCtx.fillStyle = '#050507';
+  hudCtx.fillText('EXPLORE SUITE', 1700, 42);
+
+  // Date and Location Datelines
+  hudCtx.font = '700 18px "Segoe UI", sans-serif';
+  hudCtx.fillStyle = '#ff9e7d';
+  hudCtx.fillText('24 OCT 2026', 120, 240);
+  hudCtx.fillText('DIGITAL SHOWCASE // VOL. 02', 1520, 240);
+
+  // Massive Display Kinetic Headline (Hive Inspiration)
+  hudCtx.save();
+  const textShift = Math.sin(t * 0.8) * 8;
+  hudCtx.font = '900 156px "Arial Black", Impact, sans-serif';
+  hudCtx.fillStyle = '#ffffff';
+  hudCtx.fillText('ECOMMERCE', 120, 420 + textShift);
+
+  hudCtx.fillStyle = '#ff6b4a';
+  hudCtx.fillText('SHOWCASE', 120, 560 + textShift);
+
+  // Subtitle
+  hudCtx.font = '600 24px "Segoe UI", sans-serif';
+  hudCtx.fillStyle = '#e5e7eb';
+  hudCtx.fillText('Ultra-High Performance 3D Ambient Web Asset for Modern Portfolios', 124, 620);
+  hudCtx.restore();
+
+  // Subtle scanline overlay
+  hudCtx.fillStyle = 'rgba(255, 107, 74, 0.015)';
+  for (let y = (t * 60) % 8; y < 1080; y += 8) {
+    hudCtx.fillRect(0, y, 1920, 2);
+  }
+}
+
+// Deterministic seekTo function
+window.seekTo = function(t) {
+  // Continuous 3D tunnel flight
+  const speed = 350;
+  for (let i = 0; i < boxes.length; i++) {
+    const b = boxes[i];
+    let curZ = b.baseZ + (t * speed) % 3500;
+    if (curZ > 1400) curZ -= 3500;
+    b.mesh.position.z = curZ;
+
+    b.mesh.rotation.x = t * b.rotSpeedX;
+    b.mesh.rotation.y = t * b.rotSpeedY;
+
+    // Subtle breathing swirl
+    const curAngle = b.initAngle + t * 0.25;
+    b.mesh.position.x = Math.cos(curAngle) * b.radius;
+    b.mesh.position.y = Math.sin(curAngle) * b.radius;
+  }
+
+  // Camera drift
+  camera.position.x = Math.sin(t * 0.5) * 45;
+  camera.position.y = Math.cos(t * 0.4) * 35;
+  camera.lookAt(0, 0, -600);
+
+  // Render Three.js WebGL scene
+  renderer.render(scene, camera);
+
+  // Draw 2D typography HUD
+  drawHiveHUD(t);
+
+  // Composite WebGL + HUD onto master #c
+  mainCtx.drawImage(renderer.domElement, 0, 0);
+  mainCtx.drawImage(hudCnv, 0, 0);
+};
+
+window.seekTo(0);
+</script>
+</body>
+</html>

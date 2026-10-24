@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0b0f19; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  canvas { display: block; width: 1920px; height: 1080px; }
+</style>
+<script src="motion_kit.js"></script>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+
+<script>
+const c = document.getElementById('c').getContext('2d');
+const vis = (t, a, b, f = .35) => seg(t, a, a + f) * (1 - seg(t, b - f, b));
+
+// Declarative Spring Physics Helper (simulating Framer Motion useSpring)
+function spring(t, delay = 0, stiffness = 120, damping = 14) {
+  const elapsed = Math.max(0, t - delay);
+  if (elapsed <= 0) return 0;
+  const omega = Math.sqrt(stiffness);
+  const zeta = damping / (2 * omega);
+  if (zeta < 1) {
+    const omegaD = omega * Math.sqrt(1 - zeta * zeta);
+    return 1 - Math.exp(-zeta * omega * elapsed) * (Math.cos(omegaD * elapsed) + (zeta * omega / omegaD) * Math.sin(omegaD * elapsed));
+  }
+  return 1 - Math.exp(-omega * elapsed) * (1 + omega * elapsed);
+}
+
+const UI_COMPONENTS = [
+  { title: 'Dynamic Island / Telemetry', badge: 'FRAMER MOTION', color: '#6366f1', delay: 0.1 },
+  { title: 'Interactive State Tree', badge: 'STITCH TOKENS', color: '#ec4899', delay: 0.3 },
+  { title: 'GPU Hardware Buffer', badge: 'NVENC 1080P', color: '#10b981', delay: 0.5 }
+];
+
+function drawFramerBackground(t) {
+  c.fillStyle = '#0b0f19';
+  c.fillRect(0, 0, 1920, 1080);
+
+  // Subtle radial ambient light
+  const g = c.createRadialGradient(960, 540, 100, 960, 540, 900);
+  g.addColorStop(0, 'rgba(99, 102, 241, 0.12)');
+  g.addColorStop(1, 'rgba(11, 15, 25, 0.9)');
+  c.fillStyle = g;
+  c.fillRect(0, 0, 1920, 1080);
+}
+
+function drawSpringCards(t) {
+  // Title with spring overshoot
+  const titleSpring = spring(t, 0.05, 100, 12);
+  c.save();
+  c.translate(240, 260 + (1 - titleSpring) * 60);
+  c.font = '900 72px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  c.fillStyle = '#ffffff';
+  c.fillText('DECLARATIVE MOTION', 0, 0);
+
+  c.font = '600 26px -apple-system, sans-serif';
+  c.fillStyle = '#818cf8';
+  c.fillText('Framer Motion Spring Physics & Stagger Orchestration', 0, 50);
+  c.restore();
+
+  // Cards layout
+  for (let i = 0; i < UI_COMPONENTS.length; i++) {
+    const comp = UI_COMPONENTS[i];
+    const sp = spring(t, comp.delay, 110, 13);
+    const cardX = 240 + i * 480;
+    const cardY = 460 + (1 - sp) * 90;
+
+    c.save();
+    c.translate(cardX + 220, cardY + 160);
+    c.scale(sp, sp);
+    c.translate(-220, -160);
+
+    // Card background
+    c.fillStyle = 'rgba(17, 24, 39, 0.85)';
+    c.strokeStyle = comp.color;
+    c.lineWidth = 2;
+    rr(c, 0, 0, 440, 320, 16);
+    c.fill(); c.stroke();
+
+    // Badge
+    c.fillStyle = comp.color;
+    rr(c, 30, 30, 140, 32, 8);
+    c.fill();
+
+    c.font = '700 12px monospace';
+    c.fillStyle = '#ffffff';
+    c.fillText(comp.badge, 45, 51);
+
+    // Title
+    c.font = '700 24px -apple-system, sans-serif';
+    c.fillStyle = '#f9fafb';
+    c.fillText(comp.title, 30, 115);
+
+    // Dynamic wave
+    c.strokeStyle = comp.color;
+    c.lineWidth = 3;
+    c.beginPath();
+    for (let x = 30; x <= 410; x += 10) {
+      const y = 200 + Math.sin(t * 5 + x * 0.04 + i) * 20;
+      if (x === 30) c.moveTo(x, y); else c.lineTo(x, y);
+    }
+    c.stroke();
+
+    c.restore();
+  }
+}
+
+window.seekTo = function(t) {
+  drawFramerBackground(t);
+  drawSpringCards(t);
+};
+
+window.seekTo(0);
+</script>
+</body>
+</html>
