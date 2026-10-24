@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #080b10; overflow: hidden; }
+  #p5-canvas-container { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; z-index: 1; }
+  #hud-canvas { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; z-index: 2; }
+</style>
+<!-- p5.js bundled or CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+<!-- motion_kit.js for deterministic easing & timeline segmentation -->
+<script src="motion_kit.js"></script>
+</head>
+<body>
+<div id="p5-canvas-container"></div>
+<canvas id="c" width="1920" height="1080" style="display:none;"></canvas>
+<canvas id="hud-canvas" width="1920" height="1080"></canvas>
+
+<script>
+// --- /algorithmic-art: Seeded Generative Flow Field & Particle Manifold ---
+const vis = (t, a, b, f = .35) => seg(t, a, a + f) * (1 - seg(t, b - f, b));
+
+let p5Inst = null;
+let p5Ready = false;
+
+// Instance-mode p5 sketch with noLoop() for frame-by-frame seekTo(t) determinism
+const sketch = (p) => {
+  p.setup = () => {
+    const cnv = p.createCanvas(1920, 1080);
+    cnv.parent('p5-canvas-container');
+    p.noLoop();
+    p.pixelDensity(1);
+    p5Ready = true;
+  };
+
+  // Deterministic draw function driven by timestamp t
+  p.drawFrameAt = (t) => {
+    p.background(8, 11, 16);
+
+    // Algorithmic Philosophy: "Quantum Harmonics & Fluid Convergence"
+    p.strokeWeight(1.2);
+    p.noFill();
+
+    const cols = 36;
+    const rows = 20;
+    const stepX = 1920 / cols;
+    const stepY = 1080 / rows;
+
+    // Vector flow field
+    for (let i = 0; i <= cols; i++) {
+      for (let j = 0; j <= rows; j++) {
+        const x = i * stepX;
+        const y = j * stepY;
+        const n = p.noise(i * 0.08, j * 0.08, t * 0.4);
+        const angle = n * p.TWO_PI * 2;
+        const len = 20 + n * 25;
+
+        const r = p.map(p.sin(angle + t), -1, 1, 0, 240);
+        const g = p.map(p.cos(angle - t), -1, 1, 100, 255);
+        const b = 255;
+        p.stroke(r, g, b, 70);
+
+        p.push();
+        p.translate(x, y);
+        p.rotate(angle);
+        p.line(0, 0, len, 0);
+        p.pop();
+      }
+    }
+
+    // Dynamic wave pulses
+    p.stroke(0, 240, 255, 140);
+    p.strokeWeight(2.5);
+    p.beginShape();
+    for (let x = 0; x <= 1920; x += 40) {
+      const ny = p.noise(x * 0.003, t * 0.6) * 220 + p.sin(x * 0.01 + t * 2) * 60;
+      p.vertex(x, 540 + ny - 110);
+    }
+    p.endShape();
+  };
+};
+
+p5Inst = new p5(sketch);
+
+// Composite Canvas Context (Piped to FFmpeg)
+const mainCnv = document.getElementById('c');
+const mainCtx = mainCnv.getContext('2d');
+const hudCnv = document.getElementById('hud-canvas');
+const hudCtx = hudCnv.getContext('2d');
+
+function drawHUD(t) {
+  hudCtx.clearRect(0, 0, 1920, 1080);
+
+  // Scene 1: Algorithmic Architecture Card (0s - 4s)
+  const a1 = vis(t, 0, 4.0, 0.4);
+  if (a1 > 0.001) {
+    hudCtx.save();
+    hudCtx.globalAlpha = a1;
+    const ent = E.back(seg(t, 0.1, 0.9));
+
+    // Semi-transparent glassmorphic card over p5 generative background
+    hudCtx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+    hudCtx.strokeStyle = '#00f0ff';
+    hudCtx.lineWidth = 2.5;
+    rr(hudCtx, 280, 220 + (1 - ent) * 40, 1360, 640, 16);
+    hudCtx.fill(); hudCtx.stroke();
+
+    hudCtx.font = '700 18px Consolas, monospace';
+    hudCtx.fillStyle = '#00f0ff';
+    hudCtx.fillText('// COMPUTATIONAL MOTION GRAPHICS • P5.JS GENERATIVE MATRIX', 340, 290);
+
+    hudCtx.font = '900 68px "Segoe UI", sans-serif';
+    hudCtx.fillStyle = '#ffffff';
+    hudCtx.fillText('SYSTEM ARCHITECTURE', 340, 380);
+
+    hudCtx.font = '600 28px "Segoe UI", sans-serif';
+    hudCtx.fillStyle = '#10b981';
+    hudCtx.fillText('/algorithmic-art Generative Flow Field + Real-Time Telemetry', 340, 435);
+
+    // Live parameter readouts
+    hudCtx.font = '700 20px Consolas, monospace';
+    hudCtx.fillStyle = '#f59e0b';
+    hudCtx.fillText(`VECTOR DENSITY: 720 CELLS | T = ${t.toFixed(3)}s | SEED NOISE: ACTIVE`, 340, 520);
+
+    hudCtx.restore();
+  }
+
+  // CRT Scanlines
+  hudCtx.save();
+  hudCtx.fillStyle = 'rgba(0, 240, 255, 0.02)';
+  for (let y = (t * 50) % 8; y < 1080; y += 8) {
+    hudCtx.fillRect(0, y, 1920, 2);
+  }
+  hudCtx.restore();
+}
+
+// Master deterministic render function for render_parallel.mjs
+window.seekTo = function(t) {
+  if (p5Inst && p5Inst.drawFrameAt) {
+    p5Inst.drawFrameAt(t);
+  }
+  drawHUD(t);
+
+  // Composite p5 canvas + HUD canvas onto main #c for fast GPU frame export
+  const p5CnvEl = document.querySelector('#p5-canvas-container canvas');
+  if (p5CnvEl) {
+    mainCtx.drawImage(p5CnvEl, 0, 0);
+  }
+  mainCtx.drawImage(hudCnv, 0, 0);
+};
+
+window.seekTo(0);
+</script>
+</body>
+</html>

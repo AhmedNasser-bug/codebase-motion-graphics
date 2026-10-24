@@ -1,85 +1,96 @@
 ---
 name: codebase-motion-graphics
-description: Creates continuously-animated, per-project-styled motion graphics videos (1080p MP4, 15-120s) that explain a codebase's architecture, subsystems, data flow, and security layers. Always trigger when the user asks to "make a video", "motion graphics", "animated explainer", "video tour of the codebase", or "explain this repo with an animation/video", even if they only say "create an animated overview". Never produces slideshows. Derives a unique design system for every project. Incorporates StitchMCP and asset generation.
+description: Creates continuously-animated, per-project-styled motion graphics videos (1080p MP4, 15-120s) that explain a codebase's architecture, subsystems, data flow, and security layers using p5.js, Three.js, Canvas, GSAP, and StitchMCP. Always trigger when the user asks to "make a video", "motion graphics", "animated explainer", "video tour of the codebase", or "explain this repo with an animation/video", even if they only say "create an animated overview". Never produces slideshows. Derives a unique design system for every project.
 ---
 
 # Codebase Motion Graphics (`codebase-motion-graphics`)
 
-Turn a codebase into a **real motion graphic**: things move, flow, draw themselves and react, every second of the video, in a visual language that belongs to *that* project.
+Turn a codebase into a **real motion graphic**: components move, service meshes rotate in 3D, generative noise fields react, and architectures explain themselves every second of the video, rendered in a bespoke visual language derived directly from the project's identity.
 
-## Motion Law (non-negotiable, learned from a failed slideshow render)
-1. **No static holds.** No stretch longer than **1.5 s** may be visually frozen. Every scene needs an always-on layer (flow packets, drifting grid, generative background, camera drift, looping loader) in addition to its entrance animations.
-2. **A new beat every 2–3 s** (reveal, highlight, camera move, counter tick).
-3. **Never use hold-frame / frame-duplication shortcuts** (`ffconcat duration`, `-loop 1` etc). Render **every frame**. Speed comes from parallel workers, not from skipping frames.
-4. **Animation = pure function of `t`.** One `window.seekTo(t)` redraws the whole frame from `t` alone (no timers, no `Math.random()`; use the seeded `rng()` in `motion_kit.js`). This makes rendering deterministic and parallelisable.
-5. **Verification gate before delivery:** `node scripts/motion_gate.mjs video.mp4`. It fails if the longest static stretch is above 1.5 s or more than 10% of samples are frozen. Fix and re-render until it passes.
-6. **Long videos are many short beats, not few long slides.** For 5+ minute requests, a 10-min video needs ~200+ beats. If you cannot afford that, propose a shorter cut instead of stretching slides.
+> **The Non-Negotiable Motion Law:** No static holds. No stretch longer than **1.5 seconds** may be visually frozen. Every scene requires an always-on motion layer (generative p5 flow field, orbiting Three.js mesh, continuous vector packets, drifting grid). Render **every frame** with parallel GPU workers.
 
-## Asset Generation & StitchMCP Integration
+---
 
-Visual authenticity requires embedding real UI mockups, design tokens, and synthesized domain assets into the motion canvas:
+## Motion Graphics Libraries & Specialized Skill Orchestration
 
-1. **StitchMCP Integration:**
-   - **Discover & Extract Design Tokens:** Call `list_projects` or `get_project` to inspect `designTheme` and `designMd`. Extract verified color palettes, typography scales, border radii, and elevation models directly into `design-system.json`.
-   - **Screen & Asset Acquisition:** Call `list_screens` and `download_file` using the screen's `screenshot.name` or `html_code.name` to obtain base64-encoded UI mockups.
-   - **On-Demand Screen Synthesis:** If a project lacks a UI mockup (e.g. CLI, backend, or AI service), call `generate_screen_from_text` on StitchMCP to create a high-fidelity dashboard screen, download its thumbnail/screenshot, and embed it as a primary visual anchor.
-   - **In-Canvas Compositing:** Load downloaded Stitch UI assets via `const img = new Image(); img.src = "data:image/png;base64,...";` or local files, rendering them dynamically inside device viewports with perspective, drop shadows, and scanlines.
+The skill integrates industry-standard motion graphics engines, cross-pollinating with existing visual skills:
 
-2. **Domain Asset & Icon Generation:**
-   - Use the `image-generator` subagent or generative SVG/Canvas shaders to synthesize project badges, circuit schematics, AST trees, neural network layer weights, or brand crests.
-   - Store synthesized assets in `assets/` relative to `storyboard.html`.
+### 1. Generative Backgrounds & Particle Physics: `p5.js` + `/algorithmic-art`
+* **Skill Integration:** Involves `/algorithmic-art` to establish an algorithmic philosophy (e.g. "Quantum Harmonics", "Emergent Stillness", "Fluid Convergence") before coding.
+* **p5.js Canvas Pipeline:** Uses p5 instance mode (`new p5(sketch)`) with `p.noLoop()` and a deterministic `p.drawFrameAt(t)`.
+* **Techniques:** Seeded vector flow fields (`p.noise()`), particle swarm simulations, organic density wavemaps, recursive tree branching, and spirograph guilloches.
+* **Template Reference:** `scripts/templates/p5_storyboard_template.html`.
 
-## One design system per project (never reuse)
-Before storyboarding, derive a design system from the target project and save `design-system.json` beside the storyboard.
-1. **Read the project's identity:** `DESIGN.md`, README, `globals.css`/theme tokens, logos, domain vocabulary (algorithms lab != licensing dept != arcade quiz app != ML code analysis).
-2. **`/design-consultation`:** aesthetic direction, palette, type pairing, motion character, layout grid.
-3. **`/canvas-design`:** a one-line visual philosophy and the key composition rules.
-4. **`/algorithmic-art`:** a seeded generative layer as the always-on background (sort snapshots, flow field, spirograph guilloche, glyph rain, AST graphs).
-5. **`/poster-design`:** title card and outro composition (hierarchy, scale contrast).
-6. **`/modern-web-guidance` + `/web-artifacts-builder`:** use modern CSS/JS where DOM is better than canvas; use the Vite + React + shadcn artifact route only if the storyboard needs complex state.
-Tokens that must be unique per project: palette, display + data fonts, card/shape language, motion character, background generator.
+### 2. 3D Spatial Topologies & Service Meshes: `Three.js` + `/canvas-design`
+* **Skill Integration:** Utilizes `/canvas-design` principles for visual balance, focal points, camera projection, and lighting hierarchy.
+* **Three.js WebGL Pipeline:** Leverages `THREE.WebGLRenderer({ alpha: true, antialias: true })` driven by direct GPU rasterization.
+* **Techniques:** Orbiting 3D microservice nodes, dynamic service mesh line segments, glowing particle halos, rotating volumetric database cylinders, and camera flight paths through architectural layers.
+* **Template Reference:** `scripts/templates/threejs_storyboard_template.html`.
 
-## Pipeline
+### 3. Kinetic Typographic & Card Transitions: `GSAP` + `/frontend-design`
+* **Skill Integration:** Pulls from `/frontend-design` for deliberate, non-templated typography pairings, color contrast, and micro-interactions.
+* **GSAP Animation Pipeline:** Employs GSAP `CustomEase` and deterministic seekable timelines (`tl.seek(t)`) or pure math functions in `motion_kit.js`.
+* **Techniques:** Spring overshoots (`E.back`), stagger animations across file tree cards, kinetic text reveals, and metric counters.
+
+### 4. Bespoke UI Mockups & Design Tokens: `StitchMCP`
+* **Token Extraction:** Calls `list_projects` / `get_project` to harvest `designTheme` and `designMd` tokens (colors, typography, elevation).
+* **Screen Generation:** Calls `generate_screen_from_text` to generate high-fidelity UI dashboards for CLI or backend projects, downloading them via `download_file` to composite directly into the WebGL / 2D canvas.
+
+### 5. Layout & Composition Hierarchy: `/poster-design`
+* **Skill Integration:** Guides scene titles, hero typography, negative space, and outro card seals for agency-grade visual impact.
+
+---
+
+## Production Pipeline
+
 ```mermaid
 flowchart LR
-  A[User request] --> B[Phase 1: ask depth/duration/aesthetic]
-  B --> C[Phase 2: RTK recon of the codebase]
-  C --> D[Phase 3: StitchMCP & design-system.json]
-  D --> E[Phase 4: storyboard.html canvas, seekTo t]
+  A[User Prompt / Codebase Recon] --> B[Phase 1: Depth Interview & /design-consultation]
+  B --> C[Phase 2: Library Selection p5 / Three.js / Canvas]
+  C --> D[Phase 3: /algorithmic-art + StitchMCP Tokens]
+  D --> E[Phase 4: storyboard.html + seekTo t]
   E --> F[Phase 5: GPU render_parallel.mjs]
-  F --> G[Phase 6: motion_gate.mjs]
-  G -->|fail| E
-  G -->|pass| H[Deliver MP4 + stills + report]
+  F --> G[Phase 6: motion_gate.mjs QA]
+  G -->|Pass| H[Deliver 1080p MP4 + Report]
+  G -->|Fail| E
 ```
 
-### Phase 1: Interview (mandatory `ask_question`)
-Always ask: (a) **depth** (high-level topology / data flow & API lifecycle / deep implementation & security / onboarding tour), (b) **duration**, (c) **aesthetic**: default "derive from project", (d) **motion intensity**. Do not render before answers.
+### Phase 1: Interview & Recon
+1. Ask depth (topology / data flow / deep implementation), duration (default 20s), aesthetic, and preferred engine (p5.js generative, Three.js 3D spatial, or Canvas 2D terminal).
+2. RTK reconnaissance: extract actual filenames, directory counts, database schemas, and architectural boundaries.
 
-### Phase 2: Recon (RTK: never read whole big files)
-Entry points and package manifest, layers and folders, data/persistence, security rules, shared libs. Capture only **verified** names (files, folders, tables). Do not invent features or counts; count from the directory listing.
+### Phase 2: Engine Selection & Design System
+Select the appropriate rendering stack based on codebase domain:
+* **Microservices / Cloud / Distributed Systems:** `Three.js` (3D cluster spheres, orbiting mesh, directional lighting).
+* **Algorithms / Compilers / Data Science:** `p5.js` + `/algorithmic-art` (flow fields, AST tree growth, mathematical manifolds).
+* **SaaS / Web Applications / E-Commerce:** `GSAP` + `Canvas 2D` + `StitchMCP` (broadsheet layouts, device frames, UI screen mockups).
+Save the resulting configuration in `design-system.json`.
 
-### Phase 3: StitchMCP & Asset Preparation
-- Query StitchMCP for existing design systems or generate a new UI screen for the project.
-- Download screenshots and SVG icons.
-- Write `design-system.json` containing the colors, typography, layout rules, and asset references.
+### Phase 3: Storyboard Implementation (`storyboard.html`)
+* Every storyboard must define `window.seekTo = function(t)` where $t$ is the elapsed time in seconds.
+* Composite WebGL / p5 canvases with a 2D HUD canvas onto the master `<canvas id="c" width="1920" height="1080">`.
+* Ensure an always-on layer guarantees movement every second of the video.
 
-### Phase 4: Storyboard
-- Single `storyboard.html` with a 1920x1080 `<canvas>` and `<script src="motion_kit.js">` (copy `scripts/templates/motion_kit.js` next to it).
-- Helpers: `seg(t,a,b)`, `E.out/inOut/back/elastic/expo`, `rng(seed)`, `noise2`, `bez`, `rr`, `typed`.
-- Structure: persistent background layer + 4–6 scenes with `vis(t,a,b)` fades. 20 s ≈ 5 scenes: title (3 s), the core mechanism (5 s), architecture/data flow (5 s), key detail (4 s), outro (1–2 s).
-- Fonts: use installed system fonts only (renders offline). Bahnschrift/Georgia/Consolas/Impact/Segoe UI are present on Windows.
-
-### Phase 5: GPU-Accelerated Parallel Render
+### Phase 4: GPU-Accelerated Parallel Render
 ```bash
-node scripts/render_parallel.mjs storyboard.html out.mp4 <seconds> 30 1920 1080 3
+node scripts/render_parallel.mjs storyboard.html output.mp4 20 30 1920 1080 3
 ```
-- **GPU Canvas & Rasterization:** `render_parallel.mjs` launches Chromium with `--force_high_performance_gpu`, `--use-gl=angle`, `--use-angle=d3d11`, `--enable-gpu-rasterization`, `--enable-oop-rasterization`, and `--enable-accelerated-2d-canvas`.
-- **In-Page GPU Frame Streaming:** When the storyboard exposes `<canvas id="c">`, each worker context encodes JPEG frames directly from the GPU canvas via `canvas.toDataURL("image/jpeg", 0.92)` inside the page and streams them over an exposed Node binding, eliminating full-window DevTools screenshot IPC overhead.
-- **Hardware Video Encoding:** Automatically probes and selects `h264_nvenc` (NVIDIA NVENC) -> `h264_qsv` (Intel QuickSync) -> `h264_amf` (AMD AMF) -> `libx264` fallback. Default `workers=3`.
-- **Speed:** 600 frames (20 s @ 1080p30) renders in ~27-30 s on NVENC.
+* **Discrete GPU Acceleration:** Launches Chromium with `--force_high_performance_gpu`, ANGLE Direct3D11, `--enable-accelerated-2d-canvas`, `--allow-file-access-from-files`, and `--disable-web-security`.
+* **In-Page GPU Frame Streaming:** Avoids DevTools IPC overhead by encoding directly from the GPU canvas via `canvas.toDataURL("image/jpeg", 0.92)` and streaming to `ffmpeg` with hardware acceleration (`h264_nvenc` / `h264_qsv` / `h264_amf`).
+* **Performance:** 600 frames (20s @ 1080p30) renders in **~24–28 seconds**.
 
-### Phase 6: Gate and deliver
-`node scripts/motion_gate.mjs out.mp4` must print `MOTION GATE PASSED`. Extract 4–5 stills with ffmpeg and check them visually. Deliver the MP4 path, duration/size, the design-system summary, and the stills in a report artifact.
+### Phase 5: Automated Verification Gate (`motion_gate.mjs`)
+```bash
+node scripts/motion_gate.mjs output.mp4
+```
+* Rigorously samples frame luma deltas.
+* Must satisfy:
+  1. Longest static stretch $\le 1.5\text{s}$.
+  2. Total frozen frame samples $< 10\%$.
 
-## Process hygiene
-Kill background renders when done (`manage_task list`); `render_parallel` closes its own browsers. Delete temp dirs. Do not commit videos to the project repo unless asked.
+---
+
+## Process & Resource Hygiene
+* Terminate child browser processes upon completion.
+* Proactively audit running processes with `manage_task list`.
+* Keep temporary segment directories clean.

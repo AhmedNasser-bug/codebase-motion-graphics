@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #050811; overflow: hidden; }
+  #threejs-container { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; z-index: 1; }
+  #hud-canvas { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; z-index: 2; }
+</style>
+<!-- Three.js bundled or CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- motion_kit.js for deterministic timeline segmentation -->
+<script src="motion_kit.js"></script>
+</head>
+<body>
+<div id="threejs-container"></div>
+<canvas id="c" width="1920" height="1080" style="display:none;"></canvas>
+<canvas id="hud-canvas" width="1920" height="1080"></canvas>
+
+<script>
+const vis = (t, a, b, f = .35) => seg(t, a, a + f) * (1 - seg(t, b - f, b));
+
+// --- Three.js 3D Architecture Topology & Service Mesh ---
+const container = document.getElementById('threejs-container');
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x050811, 0.0012);
+
+const camera = new THREE.PerspectiveCamera(50, 1920 / 1080, 0.1, 2000);
+camera.position.set(0, 0, 800);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setSize(1920, 1080);
+renderer.setPixelRatio(1);
+container.appendChild(renderer.domElement);
+
+// Lights
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+scene.add(ambientLight);
+const dirLight = new THREE.DirectionalLight(0x00f0ff, 1.5);
+dirLight.position.set(500, 500, 500);
+scene.add(dirLight);
+
+// 3D Nodes: Service Microservices & Topology
+const group = new THREE.Group();
+scene.add(group);
+
+const NODE_COUNT = 32;
+const nodes = [];
+const sphereGeo = new THREE.IcosahedronGeometry(18, 2);
+const matCyan = new THREE.MeshStandardMaterial({ color: 0x00f0ff, roughness: 0.2, metalness: 0.8, wireframe: false });
+const matPurple = new THREE.MeshStandardMaterial({ color: 0x8b5cf6, roughness: 0.2, metalness: 0.8 });
+const matGold = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.2, metalness: 0.8 });
+
+for (let i = 0; i < NODE_COUNT; i++) {
+  const phi = Math.acos(-1 + (2 * i) / NODE_COUNT);
+  const theta = Math.sqrt(NODE_COUNT * Math.PI) * phi;
+  const radius = 280 + (i % 3) * 60;
+
+  const mesh = new THREE.Mesh(sphereGeo, i % 3 === 0 ? matCyan : (i % 3 === 1 ? matPurple : matGold));
+  mesh.position.set(
+    radius * Math.cos(theta) * Math.sin(phi),
+    radius * Math.sin(theta) * Math.sin(phi),
+    radius * Math.cos(phi)
+  );
+  group.add(mesh);
+  nodes.push(mesh);
+}
+
+// Inter-node connection lines (Service Mesh)
+const lineMat = new THREE.LineBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.35 });
+const lineGeo = new THREE.BufferGeometry();
+const linePositions = [];
+for (let i = 0; i < NODE_COUNT; i++) {
+  for (let j = i + 1; j < NODE_COUNT; j++) {
+    if (nodes[i].position.distanceTo(nodes[j].position) < 220) {
+      linePositions.push(nodes[i].position.x, nodes[i].position.y, nodes[i].position.z);
+      linePositions.push(nodes[j].position.x, nodes[j].position.y, nodes[j].position.z);
+    }
+  }
+}
+lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
+const lines = new THREE.LineSegments(lineGeo, lineMat);
+group.add(lines);
+
+// Composite Canvas Contexts
+const mainCnv = document.getElementById('c');
+const mainCtx = mainCnv.getContext('2d');
+const hudCnv = document.getElementById('hud-canvas');
+const hudCtx = hudCnv.getContext('2d');
+
+function drawHUD(t) {
+  hudCtx.clearRect(0, 0, 1920, 1080);
+
+  // Scene 1: 3D Topology Overlay Card
+  const a1 = vis(t, 0, 4.0, 0.4);
+  if (a1 > 0.001) {
+    hudCtx.save();
+    hudCtx.globalAlpha = a1;
+    const ent = E.back(seg(t, 0.1, 0.9));
+
+    hudCtx.fillStyle = 'rgba(11, 16, 29, 0.85)';
+    hudCtx.strokeStyle = '#8b5cf6';
+    hudCtx.lineWidth = 2.5;
+    rr(hudCtx, 160, 180 + (1 - ent) * 40, 720, 680, 16);
+    hudCtx.fill(); hudCtx.stroke();
+
+    hudCtx.font = '700 18px Consolas, monospace';
+    hudCtx.fillStyle = '#8b5cf6';
+    hudCtx.fillText('// THREE.JS 3D DISTRIBUTED MESH TOPOLOGY', 200, 240);
+
+    hudCtx.font = '900 56px "Segoe UI", sans-serif';
+    hudCtx.fillStyle = '#f9fafb';
+    hudCtx.fillText('SERVICE GRAPH', 200, 320);
+
+    hudCtx.font = '600 24px "Segoe UI", sans-serif';
+    hudCtx.fillStyle = '#00f0ff';
+    hudCtx.fillText('3D Spatial Graph Orbit & Cluster Topology', 200, 370);
+
+    hudCtx.font = '400 18px "Segoe UI", sans-serif';
+    hudCtx.fillStyle = '#9ca3af';
+    hudCtx.fillText('Spatial cluster visualization renders live RPC call paths,', 200, 430);
+    hudCtx.fillText('load balancer partitions, and circuit breaker status.', 200, 460);
+
+    // Active telemetry
+    hudCtx.fillStyle = '#050811';
+    rr(hudCtx, 200, 520, 640, 160, 8);
+    hudCtx.fill();
+
+    hudCtx.font = '700 15px Consolas, monospace';
+    hudCtx.fillStyle = '#10b981';
+    hudCtx.fillText(`ACTIVE MICROSERVICES: ${NODE_COUNT} CLUSTERS`, 220, 560);
+    hudCtx.fillText(`CAMERA ORBIT: ROTATION X=${(group.rotation.x).toFixed(2)} Y=${(group.rotation.y).toFixed(2)}`, 220, 595);
+    hudCtx.fillText(`MESH CONNECTION LATENCY: 0.42ms (DIRECT3D11 NVENC)`, 220, 630);
+
+    hudCtx.restore();
+  }
+
+  // Scanline overlay
+  hudCtx.save();
+  hudCtx.fillStyle = 'rgba(0, 240, 255, 0.02)';
+  for (let y = (t * 50) % 8; y < 1080; y += 8) {
+    hudCtx.fillRect(0, y, 1920, 2);
+  }
+  hudCtx.restore();
+}
+
+// Master deterministic render function for render_parallel.mjs
+window.seekTo = function(t) {
+  // Deterministic 3D camera rotation and group oscillation
+  group.rotation.y = t * 0.4;
+  group.rotation.x = Math.sin(t * 0.25) * 0.3;
+  camera.position.z = 800 + Math.sin(t * 0.5) * 80;
+
+  // Pulse individual node scales
+  for (let i = 0; i < nodes.length; i++) {
+    const scale = 1 + 0.25 * Math.sin(t * 4 + i);
+    nodes[i].scale.set(scale, scale, scale);
+  }
+
+  // Render Three.js frame
+  renderer.render(scene, camera);
+
+  // Draw 2D HUD
+  drawHUD(t);
+
+  // Composite Three.js WebGL canvas + HUD canvas onto main #c
+  mainCtx.drawImage(renderer.domElement, 0, 0);
+  mainCtx.drawImage(hudCnv, 0, 0);
+};
+
+window.seekTo(0);
+</script>
+</body>
+</html>
