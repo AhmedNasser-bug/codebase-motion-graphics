@@ -1,0 +1,32 @@
+{
+  "name": "codebase-motion-graphics",
+  "version": "2.1.0",
+  "description": "Deterministic, GPU-accelerated motion graphics engine for codebases with StitchMCP asset integration and zero static hold guarantees.",
+  "type": "module",
+  "main": "scripts/render_parallel.mjs",
+  "scripts": {
+    "check-env": "node scripts/check_env.mjs",
+    "render": "node scripts/render_parallel.mjs",
+    "gate": "node scripts/motion_gate.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AhmedNasser-bug/codebase-motion-graphics.git"
+  },
+  "keywords": [
+    "motion-graphics",
+    "agent-skill",
+    "codebase-visualization",
+    "gpu-accelerated",
+    "nvenc",
+    "playwright",
+    "stitch-mcp",
+    "antigravity",
+    "architecture-diagrams"
+  ],
+  "author": "Ahmed Nasser",
+  "license": "MIT",
+  "dependencies": {
+    "playwright-core": "^1.64.1"
+  }
+}

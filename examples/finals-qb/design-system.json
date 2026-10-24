@@ -1,0 +1,10 @@
+{
+  "project": "finals-qb",
+  "concept": "High-Fidelity Terminal (MOLD V2): a dark, game-like neo-brutalist arcade for exam practice",
+  "derivedFrom": "app/globals.css tokens (surface #131313 ... gold #fecc17, green #4ae176, red #930013/#ffb4ab, ghost outline #4e4632), README 'Mastery Protocol', lib/game, lib/achievement, lib/themes",
+  "palette": { "surface": "#131313", "container": "#201f1f", "high": "#2a2a2a", "highest": "#353534", "gold": "#fecc17", "green": "#4ae176", "red": "#ffb4ab", "redDeep": "#930013", "outline": "#4e4632" },
+  "type": { "display": "Impact / Arial Black (neo-brutalist slab)", "data": "Consolas (terminal)" },
+  "motion": "glitch title, falling glyph rain, hard-offset card slams, XP bar fill, streak flame pulses, scanlines",
+  "generative": "seeded glyph-rain columns (mulberry32 seed 99) + CRT scanlines",
+  "layout": "no-line rule: surfaces separated by tone shifts; 4px hard borders with 8px offset shadows in gold"
+}

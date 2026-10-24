@@ -1,0 +1,10 @@
+node_modules/
+package-lock.json
+*.mp4
+*.png
+*.jpg
+*.jpeg
+temp/
+.DS_Store
+Thumbs.db
+*.log

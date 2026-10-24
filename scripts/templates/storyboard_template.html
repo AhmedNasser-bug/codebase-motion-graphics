@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #000; overflow: hidden; }
+  canvas { display: block; width: 1920px; height: 1080px; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="motion_kit.js"></script>
+<script>
+const c = document.getElementById('c').getContext('2d');
+const vis = (t, a, b, f = .35) => seg(t, a, a + f) * (1 - seg(t, b - f, b));
+
+const PAL = {
+  bg: '#0a0d14',
+  surface: '#111827',
+  border: '#1f2937',
+  accent: '#00f0ff',
+  text: '#f9fafb',
+  muted: '#9ca3af'
+};
+
+// 1. Always-on motion layer
+function drawBackground(t) {
+  c.fillStyle = PAL.bg;
+  c.fillRect(0, 0, 1920, 1080);
+
+  // Drifting grid
+  c.strokeStyle = 'rgba(0, 240, 255, 0.05)';
+  c.lineWidth = 1;
+  const off = (t * 24) % 60;
+  for (let x = -60 + off; x < 1920; x += 60) {
+    c.beginPath(); c.moveTo(x, 0); c.lineTo(x, 1080); c.stroke();
+  }
+  for (let y = -60 + off; y < 1080; y += 60) {
+    c.beginPath(); c.moveTo(0, y); c.lineTo(1920, y); c.stroke();
+  }
+}
+
+// 2. Scene 1: Title (0s - 4s)
+function scene1(t) {
+  const a = vis(t, 0, 4.0, 0.4);
+  if (a <= 0.001) return;
+  c.save();
+  c.globalAlpha = a;
+
+  const k = E.back(seg(t, 0.1, 0.9));
+  c.font = '900 80px "Segoe UI", sans-serif';
+  c.fillStyle = PAL.text;
+  c.fillText('PROJECT TITLE', 240, 450 + (1 - k) * 40);
+
+  c.font = '600 28px "Segoe UI", sans-serif';
+  c.fillStyle = PAL.accent;
+  c.fillText('// Architecture & Systems Overview', 240, 510);
+  c.restore();
+}
+
+// 3. Scanline / CRT overlay
+function scanlines(t) {
+  c.save();
+  c.fillStyle = 'rgba(0, 240, 255, 0.02)';
+  for (let y = (t * 40) % 8; y < 1080; y += 8) {
+    c.fillRect(0, y, 1920, 2);
+  }
+  c.restore();
+}
+
+window.seekTo = function(t) {
+  drawBackground(t);
+  scene1(t);
+  scanlines(t);
+};
+
+window.seekTo(0);
+</script>
+</body>
+</html>

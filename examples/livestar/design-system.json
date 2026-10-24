@@ -1,0 +1,25 @@
+{
+  "project": "livestar-portfolio",
+  "archetype": "The Living Newspaper / Broadsheet Revolt",
+  "palette": {
+    "ink": "#141414",
+    "paper": "#ffffff",
+    "revolt": "#c3251d",
+    "revolt_dark": "#8b1a14",
+    "warmth": "#febda6",
+    "gray_80": "#333333",
+    "gray_50": "#707070",
+    "gray_20": "#cccccc"
+  },
+  "fonts": {
+    "headline": "'Georgia', 'Times New Roman', serif",
+    "display": "'Impact', 'Arial Black', sans-serif",
+    "mono": "'Consolas', monospace"
+  },
+  "embedded_assets": [
+    "assets/logo.png",
+    "assets/navlogo.png",
+    "assets/halftone.svg"
+  ],
+  "generative_layer": "Broadsheet halftone dot matrix with kinetic spray paint and newspaper rule dividers"
+}

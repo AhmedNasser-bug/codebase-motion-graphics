@@ -1,0 +1,24 @@
+{
+  "project": "Code Analysis",
+  "archetype": "Cybernetic Compiler & Asymptotic Inference",
+  "palette": {
+    "bg": "#080b10",
+    "surface": "#101622",
+    "border": "#1e293b",
+    "cyan": "#00f0ff",
+    "emerald": "#10b981",
+    "purple": "#8b5cf6",
+    "amber": "#f59e0b",
+    "text": "#f8fafc",
+    "muted": "#64748b"
+  },
+  "fonts": {
+    "code": "Consolas, 'Courier New', monospace",
+    "ui": "'Segoe UI', -apple-system, sans-serif"
+  },
+  "embedded_assets": [
+    "assets/runtime_analysis.png",
+    "assets/predicted_vs_actual.png"
+  ],
+  "generative_layer": "Logarithmic coordinate matrix with drifting AST nodes and derivative vectors"
+}
