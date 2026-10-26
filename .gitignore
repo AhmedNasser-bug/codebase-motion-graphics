@@ -2,6 +2,7 @@ node_modules/
 package-lock.json
 *.mp4
 *.png
+!scripts/templates/assets/*.png
 *.jpg
 *.jpeg
 temp/

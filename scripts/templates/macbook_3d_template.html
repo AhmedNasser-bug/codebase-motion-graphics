@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>MacBook Pro 16" 3D Motion Staging Template</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #090a0f;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      overflow: hidden;
+      width: 1920px;
+      height: 1080px;
+    }
+    #c {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1920px;
+      height: 1080px;
+      display: block;
+    }
+  </style>
+  <script src="vendor/three.min.js"></script>
+  <script>
+    if (typeof THREE === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
+    }
+  </script>
+</head>
+<body>
+  <canvas id="c" width="1920" height="1080"></canvas>
+
+  <script>
+    // --- Analytical Damped Harmonic Oscillator (Spring) ---
+    function analyticalSpring(t, stiffness = 140, damping = 15, mass = 1.0) {
+      if (t <= 0) return 0.0;
+      const omega0 = Math.sqrt(stiffness / mass);
+      const zeta = damping / (2 * Math.sqrt(stiffness * mass));
+      if (zeta < 1.0) {
+        const omegaD = omega0 * Math.sqrt(1.0 - zeta * zeta);
+        const decay = Math.exp(-zeta * omega0 * t);
+        const envelope = Math.cos(omegaD * t) + (zeta / Math.sqrt(1.0 - zeta * zeta)) * Math.sin(omegaD * t);
+        return 1.0 - decay * envelope;
+      } else {
+        const decay = Math.exp(-omega0 * t);
+        return 1.0 - decay * (1.0 + omega0 * t);
+      }
+    }
+
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+
+    function clamp(val, min, max) {
+      return Math.max(min, Math.min(max, val));
+    }
+
+    // --- Dynamic Glass Sheen Shader Material ---
+    function createGlassSheenMaterial() {
+      return new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        uniforms: {
+          uTime: { value: 0.0 },
+          uSheenOpacity: { value: 0.22 },
+          uSweepAngle: { value: 0.65 },
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          varying vec2 vUv;
+          uniform float uTime;
+          uniform float uSheenOpacity;
+          uniform float uSweepAngle;
+
+          void main() {
+            float proj = vUv.x * cos(uSweepAngle) + vUv.y * sin(uSweepAngle);
+            float center = mod(uTime * 0.28, 2.4) - 0.7;
+            float bandWidth = 0.22;
+            float dist = abs(proj - center);
+            float intensity = smoothstep(bandWidth, 0.0, dist);
+            vec3 sheenColor = vec3(0.96, 0.98, 1.0);
+            gl_FragColor = vec4(sheenColor, intensity * uSheenOpacity);
+          }
+        `
+      });
+    }
+
+    // --- High-DPI Canvas 2D Backing Store ---
+    class ScreenCanvasBackingStore {
+      constructor(width = 2560, height = 1600) {
+        this.width = width;
+        this.height = height;
+        this.canvas = document.createElement('canvas');
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.ctx = this.canvas.getContext('2d', { alpha: false });
+
+        this.texture = new THREE.CanvasTexture(this.canvas);
+        this.texture.generateMipmaps = true;
+        this.texture.minFilter = THREE.LinearMipmapLinearFilter;
+        this.texture.magFilter = THREE.LinearFilter;
+        this.texture.colorSpace = (typeof THREE.SRGBColorSpace !== 'undefined') ? THREE.SRGBColorSpace : THREE.sRGBEncoding;
+
+        this.screenImage = null;
+        this.imageLoaded = false;
+        this.loadDefaultImage();
+      }
+
+      loadDefaultImage() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const screenSrc = urlParams.get('screen') || 'assets/finals_qb_desktop.png';
+
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          this.screenImage = img;
+          this.imageLoaded = true;
+          this.renderFrame(0, { cursor: { x: 500, y: 400, clicking: false, clickTime: 0 } });
+        };
+        img.onerror = () => {
+          console.warn('[ScreenStore] Could not load image:', screenSrc, '- generating procedural UI fallback');
+          this.screenImage = null;
+          this.imageLoaded = true;
+          this.renderFrame(0, { cursor: { x: 500, y: 400, clicking: false, clickTime: 0 } });
+        };
+        img.src = screenSrc;
+      }
+
+      renderFrame(t, appState) {
+        const ctx = this.ctx;
+        const w = this.width;
+        const h = this.height;
+
+        // 1. Background Fill
+        ctx.fillStyle = '#0c0d14';
+        ctx.fillRect(0, 0, w, h);
+
+        const chromeHeight = 84;
+
+        // 2. Draw live captured application screenshot or procedural fallback
+        if (this.screenImage) {
+          ctx.drawImage(this.screenImage, 0, chromeHeight, w, h - chromeHeight);
+        } else {
+          // Photorealistic procedural UI fallback
+          this.renderProceduralUI(ctx, w, h, chromeHeight, t);
+        }
+
+        // 3. Simulated macOS Window Chrome
+        ctx.fillStyle = '#171922';
+        ctx.fillRect(0, 0, w, chromeHeight);
+
+        // Window border line
+        ctx.fillStyle = '#262836';
+        ctx.fillRect(0, chromeHeight - 1, w, 1);
+
+        // Traffic Light Controls
+        ctx.fillStyle = '#ff5f56'; ctx.beginPath(); ctx.arc(46, 42, 11, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ffbd2e'; ctx.beginPath(); ctx.arc(80, 42, 11, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#27c93f'; ctx.beginPath(); ctx.arc(114, 42, 11, 0, Math.PI * 2); ctx.fill();
+
+        // Browser Address Bar
+        const barW = 860;
+        const barH = 46;
+        const barX = (w - barW) / 2;
+        const barY = (chromeHeight - barH) / 2;
+
+        ctx.fillStyle = '#242735';
+        ctx.beginPath();
+        if (ctx.roundRect) {
+          ctx.roundRect(barX, barY, barW, barH, 10);
+        } else {
+          ctx.rect(barX, barY, barW, barH);
+        }
+        ctx.fill();
+
+        // Lock icon and URL
+        ctx.fillStyle = '#10b981';
+        ctx.beginPath();
+        ctx.arc(barX + 28, barY + 23, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = 'bold 21px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('finals-qb.vercel.app/questions', w / 2, barY + 30);
+
+        // 4. Render Mouse Cursor & Click Ripples
+        if (appState && appState.cursor) {
+          this.renderCursor(ctx, t, appState.cursor);
+        }
+
+        // 5. Signal texture update
+        this.texture.needsUpdate = true;
+      }
+
+      renderProceduralUI(ctx, w, h, topY, t) {
+        const bodyH = h - topY;
+        // Sidebar
+        ctx.fillStyle = '#11131a';
+        ctx.fillRect(0, topY, 440, bodyH);
+
+        ctx.fillStyle = '#6366f1';
+        ctx.font = 'bold 32px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('FinalsQB Enterprise', 48, topY + 68);
+
+        const items = ['Exam Dashboard', 'Question Bank', 'Analytics Engine', 'Team Benchmarks', 'Settings'];
+        items.forEach((item, idx) => {
+          const isAct = idx === 1;
+          const yPos = topY + 140 + idx * 64;
+          if (isAct) {
+            ctx.fillStyle = '#1e2235';
+            ctx.fillRect(24, yPos - 38, 392, 52);
+            ctx.fillStyle = '#818cf8';
+          } else {
+            ctx.fillStyle = '#64748b';
+          }
+          ctx.font = '22px sans-serif';
+          ctx.fillText(item, 56, yPos);
+        });
+
+        // Main Content Area
+        ctx.fillStyle = '#0f1118';
+        ctx.fillRect(440, topY, w - 440, bodyH);
+
+        // Header Title
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 44px sans-serif';
+        ctx.fillText('Active Question Bank Pipeline', 490, topY + 80);
+
+        // Cards Grid
+        for (let r = 0; r < 2; r++) {
+          for (let c = 0; c < 3; c++) {
+            const cx = 490 + c * 640;
+            const cy = topY + 150 + r * 380;
+            ctx.fillStyle = '#171a26';
+            if (ctx.roundRect) {
+              ctx.beginPath();
+              ctx.roundRect(cx, cy, 600, 340, 16);
+              ctx.fill();
+            } else {
+              ctx.fillRect(cx, cy, 600, 340);
+            }
+
+            // Card highlight
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(cx + 36, cy + 36, 120, 8);
+
+            ctx.fillStyle = '#e2e8f0';
+            ctx.font = 'bold 26px sans-serif';
+            ctx.fillText(`Module ${(r * 3 + c + 1).toString().padStart(2, '0')}: Dynamic Logic`, cx + 36, cy + 90);
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '20px sans-serif';
+            ctx.fillText('Verified questions evaluated with live grading telemetry.', cx + 36, cy + 130);
+
+            // Progress bar
+            ctx.fillStyle = '#262c3d';
+            ctx.fillRect(cx + 36, cy + 260, 528, 12);
+            ctx.fillStyle = '#6366f1';
+            const pct = 0.4 + ((r * 3 + c) * 0.12);
+            ctx.fillRect(cx + 36, cy + 260, 528 * pct, 12);
+          }
+        }
+      }
+
+      renderCursor(ctx, t, cursor) {
+        const { x, y, clicking, clickTime } = cursor;
+
+        // Expanding Hydrodynamic Click Ripple Waves
+        if (clicking && t >= clickTime) {
+          const elapsed = t - clickTime;
+          if (elapsed < 0.8) {
+            const radius = elapsed * 140;
+            const alpha = Math.max(0, 1.0 - elapsed / 0.8);
+            ctx.save();
+            ctx.strokeStyle = `rgba(99, 102, 241, ${alpha * 0.85})`;
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.strokeStyle = `rgba(56, 189, 248, ${alpha * 0.6})`;
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(x, y, radius * 0.6, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+
+        // Vector macOS Arrow Pointer with Drop Shadow
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+        ctx.shadowBlur = 14;
+        ctx.shadowOffsetX = 4;
+        ctx.shadowOffsetY = 8;
+
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#0f1117';
+        ctx.lineWidth = 2.8;
+
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, 36);
+        ctx.lineTo(9, 28);
+        ctx.lineTo(18, 42);
+        ctx.lineTo(23, 39);
+        ctx.lineTo(14, 25);
+        ctx.lineTo(26, 25);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // --- Procedural MacBook Pro 16" Geometry Rig ---
+    function createProceduralMacBookPro(screenTexture, options = {}) {
+      const {
+        color = 0x22242a,       // Space Black calibrated: 0x22242a
+        metalness = 0.88,
+        roughness = 0.28,
+        lidAngle = 112,
+      } = options;
+
+      const macbook = new THREE.Group();
+      macbook.name = 'MacBookPro16_Rig';
+
+      // Dimensions in cm
+      const W = 35.6;
+      const D = 24.8;
+      const H_base = 0.95;
+      const H_lid = 0.45;
+      const cornerR = 1.4;
+
+      // Shared PBR Materials
+      const aluminumMaterial = new THREE.MeshStandardMaterial({
+        color: color,
+        metalness: metalness,
+        roughness: roughness,
+        envMapIntensity: 1.25,
+      });
+
+      const bezelMaterial = new THREE.MeshBasicMaterial({ color: 0x050507 });
+      const keyboardWellMaterial = new THREE.MeshStandardMaterial({ color: 0x111215, roughness: 0.65, metalness: 0.2 });
+      const keycapMaterial = new THREE.MeshStandardMaterial({ color: 0x18191d, roughness: 0.45, metalness: 0.15 });
+      const trackpadMaterial = new THREE.MeshStandardMaterial({ color: color, roughness: 0.38, metalness: 0.75 });
+
+      // --- Base Unibody Assembly ---
+      const baseGroup = new THREE.Group();
+      baseGroup.name = 'Base_Assembly';
+
+      const baseShape = new THREE.Shape();
+      baseShape.moveTo(-W / 2 + cornerR, -D / 2);
+      baseShape.lineTo(W / 2 - cornerR, -D / 2);
+      baseShape.quadraticCurveTo(W / 2, -D / 2, W / 2, -D / 2 + cornerR);
+      baseShape.lineTo(W / 2, D / 2 - cornerR);
+      baseShape.quadraticCurveTo(W / 2, D / 2, W / 2 - cornerR, D / 2);
+      baseShape.lineTo(-W / 2 + cornerR, D / 2);
+      baseShape.quadraticCurveTo(-W / 2, D / 2, -W / 2, D / 2 - cornerR);
+      baseShape.lineTo(-W / 2, -D / 2 + cornerR);
+      baseShape.quadraticCurveTo(-W / 2, -D / 2, -W / 2 + cornerR, -D / 2);
+
+      const baseExtrudeSettings = {
+        depth: H_base - 0.2,
+        bevelEnabled: true,
+        bevelSegments: 4,
+        steps: 1,
+        bevelSize: 0.2,
+        bevelThickness: 0.2,
+      };
+      const baseGeometry = new THREE.ExtrudeGeometry(baseShape, baseExtrudeSettings);
+      baseGeometry.rotateX(Math.PI / 2);
+      const baseMesh = new THREE.Mesh(baseGeometry, aluminumMaterial);
+      baseMesh.castShadow = true;
+      baseMesh.receiveShadow = true;
+      baseGroup.add(baseMesh);
+
+      // Recessed Keyboard Well
+      const kbWellGeo = new THREE.PlaneGeometry(28.4, 11.6);
+      const kbWellMesh = new THREE.Mesh(kbWellGeo, keyboardWellMaterial);
+      kbWellMesh.rotation.x = -Math.PI / 2;
+      kbWellMesh.position.set(0, H_base / 2 + 0.01, -4.6);
+      baseGroup.add(kbWellMesh);
+
+      // Instanced Keycaps (14 cols x 6 rows = 84 keycaps)
+      const keycapGeo = new THREE.BoxGeometry(1.68, 0.14, 1.48);
+      const keycapsInstanced = new THREE.InstancedMesh(keycapGeo, keycapMaterial, 84);
+      keycapsInstanced.castShadow = true;
+      const dummy = new THREE.Object3D();
+      let keyIdx = 0;
+      for (let row = 0; row < 6; row++) {
+        for (let col = 0; col < 14; col++) {
+          dummy.position.set(
+            -12.8 + col * 1.96,
+            H_base / 2 + 0.08,
+            -9.3 + row * 1.88
+          );
+          dummy.updateMatrix();
+          keycapsInstanced.setMatrixAt(keyIdx++, dummy.matrix);
+        }
+      }
+      keycapsInstanced.instanceMatrix.needsUpdate = true;
+      baseGroup.add(keycapsInstanced);
+
+      // Frosted Glass Trackpad
+      const trackpadGeo = new THREE.PlaneGeometry(16.0, 10.0);
+      const trackpadMesh = new THREE.Mesh(trackpadGeo, trackpadMaterial);
+      trackpadMesh.rotation.x = -Math.PI / 2;
+      trackpadMesh.position.set(0, H_base / 2 + 0.015, 6.4);
+      baseGroup.add(trackpadMesh);
+
+      // Front Thumb Lip
+      const lipGeo = new THREE.BoxGeometry(6.4, 0.25, 0.4);
+      const lipMesh = new THREE.Mesh(lipGeo, bezelMaterial);
+      lipMesh.position.set(0, H_base / 2 - 0.1, D / 2);
+      baseGroup.add(lipMesh);
+
+      macbook.add(baseGroup);
+
+      // --- Articulated Display Lid Assembly ---
+      const lidGroup = new THREE.Group();
+      lidGroup.name = 'Lid_Assembly';
+      lidGroup.position.set(0, H_base / 2, -D / 2);
+
+      // Aluminum Lid Shell
+      const lidExtrudeSettings = {
+        depth: H_lid - 0.15,
+        bevelEnabled: true,
+        bevelSegments: 3,
+        steps: 1,
+        bevelSize: 0.15,
+        bevelThickness: 0.15,
+      };
+      const lidGeometry = new THREE.ExtrudeGeometry(baseShape, lidExtrudeSettings);
+      lidGeometry.rotateX(Math.PI / 2);
+      const lidShell = new THREE.Mesh(lidGeometry, aluminumMaterial);
+      lidShell.position.set(0, 0, D / 2);
+      lidShell.castShadow = true;
+      lidGroup.add(lidShell);
+
+      // Gloss Display Bezel
+      const bezelGeo = new THREE.PlaneGeometry(35.0, 24.2);
+      const bezelMesh = new THREE.Mesh(bezelGeo, bezelMaterial);
+      bezelMesh.rotation.x = -Math.PI / 2;
+      bezelMesh.position.set(0, H_lid / 2 + 0.01, D / 2);
+      lidGroup.add(bezelMesh);
+
+      // Liquid Retina XDR Screen Quad (16:10 Ratio, Dual-Layer PBR)
+      const screenMat = new THREE.MeshPhysicalMaterial({
+        map: screenTexture,
+        roughness: 0.06,
+        metalness: 0.04,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.04,
+        ior: 1.52,
+        reflectivity: 0.9,
+      });
+      const screenGeo = new THREE.PlaneGeometry(33.8, 21.125);
+      const screenMesh = new THREE.Mesh(screenGeo, screenMat);
+      screenMesh.rotation.x = -Math.PI / 2;
+      screenMesh.position.set(0, H_lid / 2 + 0.02, D / 2 + 0.2);
+      lidGroup.add(screenMesh);
+
+      // Top Notch Pill
+      const notchGeo = new THREE.PlaneGeometry(2.2, 0.65);
+      const notchMesh = new THREE.Mesh(notchGeo, bezelMaterial);
+      notchMesh.rotation.x = -Math.PI / 2;
+      notchMesh.position.set(0, H_lid / 2 + 0.025, D / 2 - 10.15);
+      lidGroup.add(notchMesh);
+
+      // Studio Specular Sheen Overlay (Dynamic Light Sweep)
+      const sheenMaterial = createGlassSheenMaterial();
+      const sheenMesh = new THREE.Mesh(screenGeo, sheenMaterial);
+      sheenMesh.rotation.x = -Math.PI / 2;
+      sheenMesh.position.set(0, H_lid / 2 + 0.03, D / 2 + 0.2);
+      lidGroup.add(sheenMesh);
+
+      macbook.add(lidGroup);
+
+      // Calibrated open angle (112 deg)
+      lidGroup.rotation.x = THREE.MathUtils.degToRad(-lidAngle);
+
+      return { macbook, baseGroup, lidGroup, screenMesh, sheenMaterial };
+    }
+
+    // --- Scene Setup ---
+    const canvas = document.getElementById('c');
+    const renderer = new THREE.WebGLRenderer({
+      canvas: canvas,
+      antialias: true,
+      alpha: false,
+      preserveDrawingBuffer: true,
+      powerPreference: 'high-performance'
+    });
+    renderer.setSize(1920, 1080);
+    renderer.setPixelRatio(1);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    if (typeof THREE.ACESFilmicToneMapping !== 'undefined') {
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.15;
+    }
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x090a0f);
+
+    const camera = new THREE.PerspectiveCamera(38, 1920 / 1080, 0.5, 500);
+    camera.position.set(0, 18, 48);
+    camera.lookAt(0, 10, 0);
+
+    // --- Lighting Studio Rig ---
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
+    keyLight.position.set(30, 45, 40);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.width = 2048;
+    keyLight.shadow.mapSize.height = 2048;
+    keyLight.shadow.bias = -0.0005;
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0x8da2d4, 1.2);
+    fillLight.position.set(-35, 25, 20);
+    scene.add(fillLight);
+
+    const rimLight = new THREE.DirectionalLight(0xffecd2, 2.5);
+    rimLight.position.set(0, 35, -45);
+    scene.add(rimLight);
+
+    const ambientLight = new THREE.AmbientLight(0x181a24, 0.7);
+    scene.add(ambientLight);
+
+    // Ground Contact Shadow Plane
+    const shadowGeo = new THREE.PlaneGeometry(120, 120);
+    const shadowMat = new THREE.ShadowMaterial({ opacity: 0.35 });
+    const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
+    shadowMesh.rotation.x = -Math.PI / 2;
+    shadowMesh.position.y = -0.05;
+    shadowMesh.receiveShadow = true;
+    scene.add(shadowMesh);
+
+    // Subtle Architectural Backdrop Grid
+    const gridHelper = new THREE.GridHelper(120, 40, 0x1e2438, 0x111624);
+    gridHelper.position.y = -0.06;
+    scene.add(gridHelper);
+
+    // --- Initialize High-DPI Screen Store & MacBook Pro Rig ---
+    const screenStore = new ScreenCanvasBackingStore(2560, 1600);
+
+    // Reviewer recommendation: set anisotropic filtering to maximum supported
+    const maxAnisotropy = renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 16;
+    screenStore.texture.anisotropy = maxAnisotropy || 16;
+
+    const { macbook, lidGroup, screenMesh, sheenMaterial } = createProceduralMacBookPro(screenStore.texture, {
+      color: 0x22242a, // Space Black
+      metalness: 0.88,
+      roughness: 0.28,
+      lidAngle: 112
+    });
+    scene.add(macbook);
+
+    // --- Deterministic Timeline & Choreography ---
+    function evaluateAppTimeline(t) {
+      // Interactive cursor path across the active screen (2560x1600 coordinates)
+      // Act 1 (0 - 2.5s): idle off-center
+      // Act 2 (2.5s - 6.5s): glide into feature card
+      // Act 3 (6.5s - 12s): click button, ripple waves
+      let cx = 500, cy = 400, clicking = false, clickTime = 7.5;
+
+      if (t < 2.5) {
+        cx = 500 + Math.sin(t * 1.2) * 40;
+        cy = 400 + Math.cos(t * 0.9) * 30;
+      } else if (t < 6.5) {
+        const p = analyticalSpring((t - 2.5) / 4.0, 110, 16);
+        cx = lerp(540, 1150, p);
+        cy = lerp(430, 720, p);
+      } else if (t < 12.0) {
+        const p = analyticalSpring((t - 6.5) / 2.5, 140, 18);
+        cx = lerp(1150, 1480, p);
+        cy = lerp(720, 890, p);
+        if (t >= clickTime && t <= clickTime + 0.8) {
+          clicking = true;
+        }
+      } else {
+        const p = analyticalSpring((t - 12.0) / 4.0, 90, 15);
+        cx = lerp(1480, 1280, p);
+        cy = lerp(890, 680, p);
+      }
+
+      return {
+        cursor: { x: cx, y: cy, clicking, clickTime }
+      };
+    }
+
+    function updateCameraChoreography(t) {
+      let camX = 0, camY = 18, camZ = 48;
+      let lookX = 0, lookY = 10, lookZ = 0;
+
+      if (t <= 2.5) {
+        // Act 1: Low-Angle Glancing Macro Sweep across chassis chamfers
+        const p = analyticalSpring(t / 2.5, 120, 18);
+        camX = lerp(-22, -14, p);
+        camY = lerp(9, 14, p);
+        camZ = lerp(26, 32, p);
+        lookX = lerp(-4, -1, p);
+        lookY = lerp(5, 8, p);
+        lookZ = lerp(-2, 0, p);
+      } else if (t <= 6.5) {
+        // Act 2: Three-Quarter Isometric Beauty Orbit
+        const p = analyticalSpring((t - 2.5) / 4.0, 110, 16);
+        camX = lerp(-14, 18, p);
+        camY = lerp(14, 19, p);
+        camZ = lerp(32, 38, p);
+        lookX = lerp(-1, 0, p);
+        lookY = lerp(8, 11, p);
+        lookZ = 0;
+      } else if (t <= 12.0) {
+        // Act 3: Feature Push-In to Screen Content
+        const p = analyticalSpring((t - 6.5) / 3.0, 130, 18);
+        camX = lerp(18, 0, p);
+        camY = lerp(19, 14.8, p);
+        camZ = lerp(38, 23.5, p);
+        lookX = 0;
+        lookY = lerp(11, 14.2, p);
+        lookZ = lerp(0, -6.0, p);
+      } else {
+        // Act 4: Hero Pull-Back to Full Device Lockup
+        const p = analyticalSpring((t - 12.0) / 4.0, 100, 16);
+        camX = lerp(0, 0, p);
+        camY = lerp(14.8, 18.5, p);
+        camZ = lerp(23.5, 46.0, p);
+        lookX = 0;
+        lookY = lerp(14.2, 10.0, p);
+        lookZ = lerp(-6.0, 0, p);
+      }
+
+      // Continuous breathing micro-motion (Non-negotiable motion gate requirement)
+      const breathCamY = Math.sin(t * 0.85) * 0.18;
+      const breathCamX = Math.cos(t * 0.65) * 0.15;
+
+      camera.position.set(camX + breathCamX, camY + breathCamY, camZ);
+      camera.lookAt(lookX, lookY, lookZ);
+    }
+
+    // --- Deterministic Scrubbing Contract (window.seekTo) ---
+    window.seekTo = function(t) {
+      // 1. Camera kinematics
+      updateCameraChoreography(t);
+
+      // 2. Chassis continuous micro-motion drift (zero freeze guarantee)
+      macbook.rotation.y = Math.sin(t * 0.75) * 0.035;
+      macbook.position.y = Math.sin(t * 1.1) * 0.22;
+
+      // 3. Dynamic glass sheen sweep update
+      sheenMaterial.uniforms.uTime.value = t;
+
+      // 4. Synchronously update high-DPI canvas screen backing store
+      const appState = evaluateAppTimeline(t);
+      screenStore.renderFrame(t, appState);
+
+      // 5. Render Three.js WebGL scene directly to <canvas id="c">
+      renderer.render(scene, camera);
+    };
+
+    // Initial seek to frame 0
+    window.seekTo(0);
+
+    // If viewed interactively in browser outside headless runner, run requestAnimationFrame
+    let isInteracting = false;
+    let interactiveTime = 0;
+    if (!window.__RENDER_RUNNER__) {
+      function animate() {
+        if (!window.__SEEKING__) {
+          interactiveTime += 1 / 60;
+          window.seekTo(interactiveTime);
+        }
+        requestAnimationFrame(animate);
+      }
+      requestAnimationFrame(animate);
+    }
+  </script>
+</body>
+</html>

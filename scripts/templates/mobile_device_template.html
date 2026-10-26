@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>iPhone 16 Pro 3D Mobile Motion Staging Template</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #090a0f;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      overflow: hidden;
+      width: 1920px;
+      height: 1080px;
+    }
+    #c {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1920px;
+      height: 1080px;
+      display: block;
+    }
+  </style>
+  <script src="vendor/three.min.js"></script>
+  <script>
+    if (typeof THREE === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
+    }
+  </script>
+</head>
+<body>
+  <canvas id="c" width="1920" height="1080"></canvas>
+
+  <script>
+    // --- Analytical Damped Harmonic Oscillator (Spring) ---
+    function analyticalSpring(t, stiffness = 140, damping = 15, mass = 1.0) {
+      if (t <= 0) return 0.0;
+      const omega0 = Math.sqrt(stiffness / mass);
+      const zeta = damping / (2 * Math.sqrt(stiffness * mass));
+      if (zeta < 1.0) {
+        const omegaD = omega0 * Math.sqrt(1.0 - zeta * zeta);
+        const decay = Math.exp(-zeta * omega0 * t);
+        const envelope = Math.cos(omegaD * t) + (zeta / Math.sqrt(1.0 - zeta * zeta)) * Math.sin(omegaD * t);
+        return 1.0 - decay * envelope;
+      } else {
+        const decay = Math.exp(-omega0 * t);
+        return 1.0 - decay * (1.0 + omega0 * t);
+      }
+    }
+
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+
+    // --- Dynamic Screen Sheen Shader Material ---
+    function createMobileGlassSheenMaterial() {
+      return new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        uniforms: {
+          uTime: { value: 0.0 },
+          uSheenOpacity: { value: 0.25 },
+          uSweepAngle: { value: 0.72 },
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          varying vec2 vUv;
+          uniform float uTime;
+          uniform float uSheenOpacity;
+          uniform float uSweepAngle;
+
+          void main() {
+            float proj = vUv.x * cos(uSweepAngle) + vUv.y * sin(uSweepAngle);
+            float center = mod(uTime * 0.32, 2.5) - 0.75;
+            float bandWidth = 0.25;
+            float dist = abs(proj - center);
+            float intensity = smoothstep(bandWidth, 0.0, dist);
+            vec3 sheenColor = vec3(0.95, 0.98, 1.0);
+            gl_FragColor = vec4(sheenColor, intensity * uSheenOpacity);
+          }
+        `
+      });
+    }
+
+    // --- High-DPI Mobile Canvas 2D Backing Store (1179 x 2556) ---
+    class MobileScreenCanvasBackingStore {
+      constructor(width = 1179, height = 2556) {
+        this.width = width;
+        this.height = height;
+        this.canvas = document.createElement('canvas');
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.ctx = this.canvas.getContext('2d', { alpha: false });
+
+        this.texture = new THREE.CanvasTexture(this.canvas);
+        this.texture.generateMipmaps = true;
+        this.texture.minFilter = THREE.LinearMipmapLinearFilter;
+        this.texture.magFilter = THREE.LinearFilter;
+        this.texture.colorSpace = (typeof THREE.SRGBColorSpace !== 'undefined') ? THREE.SRGBColorSpace : THREE.sRGBEncoding;
+
+        this.screenImage = null;
+        this.imageLoaded = false;
+        this.loadDefaultImage();
+      }
+
+      loadDefaultImage() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const screenSrc = urlParams.get('screen') || 'assets/finals_qb_mobile.png';
+
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          this.screenImage = img;
+          this.imageLoaded = true;
+          this.renderFrame(0, { touches: [] });
+        };
+        img.onerror = () => {
+          console.warn('[MobileScreenStore] Could not load image:', screenSrc, '- generating procedural mobile UI');
+          this.screenImage = null;
+          this.imageLoaded = true;
+          this.renderFrame(0, { touches: [] });
+        };
+        img.src = screenSrc;
+      }
+
+      renderFrame(t, appState) {
+        const ctx = this.ctx;
+        const w = this.width;
+        const h = this.height;
+
+        // 1. OLED True Black Background
+        ctx.fillStyle = '#08090d';
+        ctx.fillRect(0, 0, w, h);
+
+        const statusH = 120;
+        const bottomH = 100;
+
+        // 2. Render Live Mobile Screencast or Procedural Fallback
+        const scrollY = Math.sin(t * 0.95) * 75;
+        if (this.screenImage) {
+          ctx.drawImage(this.screenImage, 0, scrollY, w, h);
+        } else {
+          this.renderProceduralMobileUI(ctx, w, h, statusH + scrollY, t);
+        }
+
+        // 3. Render iOS Status Bar Overlay (Time 9:41, Cellular, Wifi, Battery)
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 44px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('9:41', 88, 86);
+
+        // Battery Pill at top-right
+        const bX = w - 160, bY = 56;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 4;
+        if (ctx.roundRect) {
+          ctx.beginPath();
+          ctx.roundRect(bX, bY, 70, 34, 8);
+          ctx.stroke();
+        } else {
+          ctx.strokeRect(bX, bY, 70, 34);
+        }
+        ctx.fillStyle = '#10b981';
+        ctx.fillRect(bX + 5, bY + 5, 48, 24);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(bX + 72, bY + 11, 4, 12);
+
+        // 4. Render Dynamic Touch Interaction Ripple Waves
+        if (appState && appState.touches) {
+          appState.touches.forEach(touch => {
+            const elapsed = t - touch.t;
+            if (elapsed >= 0 && elapsed < 0.9) {
+              const radius = elapsed * 180;
+              const alpha = Math.max(0, 1.0 - elapsed / 0.9);
+              ctx.save();
+              ctx.strokeStyle = `rgba(99, 102, 241, ${alpha * 0.9})`;
+              ctx.lineWidth = 6;
+              ctx.beginPath();
+              ctx.arc(touch.x, touch.y, radius, 0, Math.PI * 2);
+              ctx.stroke();
+
+              ctx.fillStyle = `rgba(129, 140, 248, ${alpha * 0.4})`;
+              ctx.beginPath();
+              ctx.arc(touch.x, touch.y, 28, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.restore();
+            }
+          });
+        }
+
+        // 5. iOS Home Indicator Bar
+        const barW = 420;
+        const barH = 14;
+        const barX = (w - barW) / 2;
+        const barY = h - 46;
+        ctx.fillStyle = '#ffffff';
+        if (ctx.roundRect) {
+          ctx.beginPath();
+          ctx.roundRect(barX, barY, barW, barH, 7);
+          ctx.fill();
+        } else {
+          ctx.fillRect(barX, barY, barW, barH);
+        }
+
+        this.texture.needsUpdate = true;
+      }
+
+      renderProceduralMobileUI(ctx, w, h, topY, t) {
+        // App Navigation Header
+        ctx.fillStyle = '#10121a';
+        ctx.fillRect(0, 0, w, 260);
+
+        ctx.fillStyle = '#818cf8';
+        ctx.font = 'bold 36px sans-serif';
+        ctx.fillText('FINALS QB', 60, 200);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 56px sans-serif';
+        ctx.fillText('Question Bank', 60, 260);
+
+        // Cards list
+        for (let i = 0; i < 4; i++) {
+          const cy = 340 + i * 360;
+          ctx.fillStyle = '#161924';
+          if (ctx.roundRect) {
+            ctx.beginPath();
+            ctx.roundRect(50, cy, w - 100, 310, 24);
+            ctx.fill();
+          } else {
+            ctx.fillRect(50, cy, w - 100, 310);
+          }
+
+          ctx.fillStyle = i === 1 ? '#38bdf8' : '#6366f1';
+          ctx.fillRect(80, cy + 40, 90, 8);
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 40px sans-serif';
+          ctx.fillText(`Exam Set #${(i + 1).toString().padStart(2, '0')}`, 80, cy + 110);
+
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '30px sans-serif';
+          ctx.fillText('120 Questions • Verified Solution Keys', 80, cy + 170);
+
+          // Action Button
+          ctx.fillStyle = i === 1 ? '#4f46e5' : '#22283a';
+          if (ctx.roundRect) {
+            ctx.beginPath();
+            ctx.roundRect(80, cy + 215, w - 160, 64, 16);
+            ctx.fill();
+          } else {
+            ctx.fillRect(80, cy + 215, w - 160, 64);
+          }
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 30px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(i === 1 ? 'Start Live Simulation' : 'View Syllabus', w / 2, cy + 258);
+          ctx.textAlign = 'left';
+        }
+      }
+    }
+
+    // --- Procedural iPhone 16 Pro Titanium Rig ---
+    function createProceduralIPhone16Pro(screenTexture) {
+      const phone = new THREE.Group();
+      phone.name = 'iPhone16Pro_Rig';
+
+      // Dimensions in cm (iPhone 16 Pro: 7.15cm x 14.96cm x 0.825cm)
+      const W = 7.15;
+      const H = 14.96;
+      const D = 0.825;
+      const R = 1.15;
+
+      // Grade 5 Brushed Titanium Material
+      const titaniumMaterial = new THREE.MeshStandardMaterial({
+        color: 0x484542, // Natural Titanium
+        metalness: 0.92,
+        roughness: 0.36,
+        envMapIntensity: 1.4,
+      });
+
+      // Ceramic Shield OLED Screen Material (Dual-Layer PBR)
+      const screenMaterial = new THREE.MeshPhysicalMaterial({
+        map: screenTexture,
+        metalness: 0.02,
+        roughness: 0.03,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.02,
+        ior: 1.54,
+        reflectivity: 0.95
+      });
+
+      // Chassis 2D Contour
+      const bodyShape = new THREE.Shape();
+      bodyShape.moveTo(-W / 2 + R, -H / 2);
+      bodyShape.lineTo(W / 2 - R, -H / 2);
+      bodyShape.quadraticCurveTo(W / 2, -H / 2, W / 2, -H / 2 + R);
+      bodyShape.lineTo(W / 2, H / 2 - R);
+      bodyShape.quadraticCurveTo(W / 2, H / 2, W / 2 - R, H / 2);
+      bodyShape.lineTo(-W / 2 + R, H / 2);
+      bodyShape.quadraticCurveTo(-W / 2, H / 2, -W / 2, H / 2 - R);
+      bodyShape.lineTo(-W / 2, -H / 2 + R);
+      bodyShape.quadraticCurveTo(-W / 2, -H / 2, -W / 2 + R, -H / 2);
+
+      const bodyExtrudeSettings = {
+        depth: D,
+        bevelEnabled: true,
+        bevelSegments: 4,
+        bevelSize: 0.08,
+        bevelThickness: 0.08,
+      };
+      const bodyGeo = new THREE.ExtrudeGeometry(bodyShape, bodyExtrudeSettings);
+      const bodyMesh = new THREE.Mesh(bodyGeo, titaniumMaterial);
+      bodyMesh.position.z = -D / 2;
+      bodyMesh.castShadow = true;
+      bodyMesh.receiveShadow = true;
+      phone.add(bodyMesh);
+
+      // Front OLED Screen (19.5:9 ratio with ultra-slim 1.2mm border)
+      const screenW = W - 0.24;
+      const screenH = H - 0.24;
+      const screenGeo = new THREE.PlaneGeometry(screenW, screenH);
+      const screenMesh = new THREE.Mesh(screenGeo, screenMaterial);
+      screenMesh.position.z = D / 2 + 0.01;
+      phone.add(screenMesh);
+
+      // Dynamic Island Floating Capsule
+      const islandShape = new THREE.Shape();
+      const iw = 2.4, ih = 0.72, ir = 0.36;
+      islandShape.moveTo(-iw / 2 + ir, -ih / 2);
+      islandShape.lineTo(iw / 2 - ir, -ih / 2);
+      islandShape.quadraticCurveTo(iw / 2, -ih / 2, iw / 2, -ih / 2 + ir);
+      islandShape.lineTo(iw / 2, ih / 2 - ir);
+      islandShape.quadraticCurveTo(iw / 2, ih / 2, iw / 2 - ir, ih / 2);
+      islandShape.lineTo(-iw / 2 + ir, ih / 2);
+      islandShape.quadraticCurveTo(-iw / 2, ih / 2, -iw / 2, ih / 2 - ir);
+      islandShape.lineTo(-iw / 2, -ih / 2 + ir);
+      islandShape.quadraticCurveTo(-iw / 2, -ih / 2, -iw / 2 + ir, -ih / 2);
+
+      const islandGeo = new THREE.ShapeGeometry(islandShape);
+      const islandMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+      const islandMesh = new THREE.Mesh(islandGeo, islandMat);
+      islandMesh.position.set(0, H / 2 - 1.15, D / 2 + 0.02);
+      phone.add(islandMesh);
+
+      // Dynamic Glass Sheen Overlay
+      const sheenMaterial = createMobileGlassSheenMaterial();
+      const sheenMesh = new THREE.Mesh(screenGeo, sheenMaterial);
+      sheenMesh.position.z = D / 2 + 0.03;
+      phone.add(sheenMesh);
+
+      // Rear Sapphire Camera Plateau
+      const cameraPlateauGeo = new THREE.BoxGeometry(3.8, 3.8, 0.35);
+      const plateauMesh = new THREE.Mesh(cameraPlateauGeo, titaniumMaterial);
+      plateauMesh.position.set(-W / 4 + 0.2, H / 4 + 0.6, -D / 2 - 0.18);
+      phone.add(plateauMesh);
+
+      // 3 Rear Camera Lenses
+      const lensGeo = new THREE.CylinderGeometry(0.72, 0.72, 0.22, 32);
+      const lensMat = new THREE.MeshPhysicalMaterial({ color: 0x111115, metalness: 0.95, roughness: 0.1, clearcoat: 1.0 });
+      lensGeo.rotateX(Math.PI / 2);
+
+      const lens1 = new THREE.Mesh(lensGeo, lensMat);
+      lens1.position.set(-W / 4 - 0.7, H / 4 + 1.5, -D / 2 - 0.38);
+      phone.add(lens1);
+
+      const lens2 = new THREE.Mesh(lensGeo, lensMat);
+      lens2.position.set(-W / 4 - 0.7, H / 4 - 0.3, -D / 2 - 0.38);
+      phone.add(lens2);
+
+      const lens3 = new THREE.Mesh(lensGeo, lensMat);
+      lens3.position.set(-W / 4 + 1.1, H / 4 + 0.6, -D / 2 - 0.38);
+      phone.add(lens3);
+
+      return { phone, screenMesh, islandMesh, sheenMaterial };
+    }
+
+    // --- Scene Setup ---
+    const canvas = document.getElementById('c');
+    const renderer = new THREE.WebGLRenderer({
+      canvas: canvas,
+      antialias: true,
+      alpha: false,
+      preserveDrawingBuffer: true,
+      powerPreference: 'high-performance'
+    });
+    renderer.setSize(1920, 1080);
+    renderer.setPixelRatio(1);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    if (typeof THREE.ACESFilmicToneMapping !== 'undefined') {
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.15;
+    }
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x090a0f);
+
+    const camera = new THREE.PerspectiveCamera(36, 1920 / 1080, 0.5, 500);
+    camera.position.set(0, 0, 36);
+    camera.lookAt(0, 0, 0);
+
+    // --- Studio Lighting Rig ---
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.4);
+    keyLight.position.set(25, 30, 35);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.width = 2048;
+    keyLight.shadow.mapSize.height = 2048;
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0x7ea0e6, 1.4);
+    fillLight.position.set(-30, 20, 20);
+    scene.add(fillLight);
+
+    const rimLight = new THREE.DirectionalLight(0xffe8ce, 2.6);
+    rimLight.position.set(0, 25, -35);
+    scene.add(rimLight);
+
+    const ambientLight = new THREE.AmbientLight(0x181b28, 0.8);
+    scene.add(ambientLight);
+
+    // Contact Shadow Floor
+    const shadowGeo = new THREE.PlaneGeometry(80, 80);
+    const shadowMat = new THREE.ShadowMaterial({ opacity: 0.38 });
+    const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
+    shadowMesh.rotation.x = -Math.PI / 2;
+    shadowMesh.position.y = -10.5;
+    shadowMesh.receiveShadow = true;
+    scene.add(shadowMesh);
+
+    // Subtle Architectural Ambient Grid
+    const gridHelper = new THREE.GridHelper(80, 32, 0x1f2740, 0x111624);
+    gridHelper.position.y = -10.51;
+    scene.add(gridHelper);
+
+    // --- Initialize Mobile Screen Store & iPhone 16 Pro Rig ---
+    const mobileScreenStore = new MobileScreenCanvasBackingStore(1179, 2556);
+
+    // Reviewer recommendation: set maximum anisotropic filtering
+    const maxAnisotropy = renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 16;
+    mobileScreenStore.texture.anisotropy = maxAnisotropy || 16;
+
+    const { phone, screenMesh, islandMesh, sheenMaterial } = createProceduralIPhone16Pro(mobileScreenStore.texture);
+    scene.add(phone);
+
+    // --- Deterministic Timeline & Choreography ---
+    function evaluateMobileTimeline(t) {
+      const touches = [];
+      // Touch interactions at t = 1.0s, 2.2s, 3.8s, and 7.6s
+      if (t >= 0.9 && t <= 2.1) {
+        touches.push({ t: 1.0, x: 590, y: 760 });
+      }
+      if (t >= 2.1 && t <= 3.3) {
+        touches.push({ t: 2.2, x: 590, y: 1020 });
+      }
+      if (t >= 3.6 && t <= 4.8) {
+        touches.push({ t: 3.8, x: 590, y: 1220 });
+      }
+      if (t >= 7.4 && t <= 8.6) {
+        touches.push({ t: 7.6, x: 590, y: 880 });
+      }
+      return { touches };
+    }
+
+    function updateMobileCameraChoreography(t) {
+      let camX = 0, camY = 0, camZ = 36;
+      let rotX = 0, rotY = 0, rotZ = 0;
+
+      if (t <= 2.5) {
+        // Act 1: Dramatic 3D Portrait Angle showcasing titanium bevels
+        const p = analyticalSpring(t / 2.5, 36, 10);
+        camX = lerp(-12, -5, p);
+        camY = lerp(4.5, 1.5, p);
+        camZ = lerp(24, 28, p);
+        rotX = lerp(0.24, 0.12, p);
+        rotY = lerp(-0.58, -0.30, p);
+      } else if (t <= 6.5) {
+        // Act 2: Orbital Sweep to 3/4 Floating View
+        const p = analyticalSpring((t - 2.5) / 4.0, 32, 9);
+        camX = lerp(-5, 6, p);
+        camY = lerp(1.5, 2.0, p);
+        camZ = lerp(28, 26, p);
+        rotX = lerp(0.12, 0.08, p);
+        rotY = lerp(-0.30, 0.38, p);
+      } else if (t <= 12.0) {
+        // Act 3: Screen Push-In for Touch Taps & Feature Clarity
+        const p = analyticalSpring((t - 6.5) / 3.0, 35, 10);
+        camX = lerp(6, 0, p);
+        camY = lerp(2.0, 0, p);
+        camZ = lerp(26, 19.5, p);
+        rotX = lerp(0.08, 0.02, p);
+        rotY = lerp(0.38, 0.0, p);
+      } else {
+        // Act 4: Hero Pull-Back to Full Device Perspective
+        const p = analyticalSpring((t - 12.0) / 4.0, 30, 9);
+        camX = lerp(0, 0, p);
+        camY = lerp(0, 0.5, p);
+        camZ = lerp(19.5, 32.0, p);
+        rotX = lerp(0.02, 0.08, p);
+        rotY = lerp(0.0, -0.15, p);
+      }
+
+      // Continuous gyroscopic pitch oscillation & anti-freeze breathing
+      const oscY = Math.sin(t * 1.2) * 0.095;
+      const oscX = Math.cos(t * 1.0) * 0.075;
+      const floatY = Math.sin(t * 1.4) * 0.75;
+
+      // Continuous camera breathing & orbital drift (Non-negotiable motion gate requirement)
+      const breathCamX = Math.cos(t * 0.85) * 0.55;
+      const breathCamY = Math.sin(t * 1.15) * 0.45;
+      const breathLookY = Math.sin(t * 0.75) * 0.35;
+
+      phone.rotation.set(rotX + oscX, rotY + oscY, rotZ);
+      phone.position.set(0, floatY, 0);
+
+      camera.position.set(camX + breathCamX, camY + breathCamY, camZ);
+      camera.lookAt(0, breathLookY, 0);
+    }
+
+    // --- Deterministic Scrubbing Contract (window.seekTo) ---
+    window.seekTo = function(t) {
+      // 1. Camera & device kinematics
+      updateMobileCameraChoreography(t);
+
+      // 2. Dynamic glass sheen sweep update
+      sheenMaterial.uniforms.uTime.value = t;
+
+      // 3. Synchronously render mobile screen backing store
+      const appState = evaluateMobileTimeline(t);
+      mobileScreenStore.renderFrame(t, appState);
+
+      // 4. Render WebGL scene to <canvas id="c">
+      renderer.render(scene, camera);
+    };
+
+    // Initial seek
+    window.seekTo(0);
+
+    // Interactive preview in browser outside headless runner
+    let interactiveTime = 0;
+    if (!window.__RENDER_RUNNER__) {
+      function animate() {
+        if (!window.__SEEKING__) {
+          interactiveTime += 1 / 60;
+          window.seekTo(interactiveTime);
+        }
+        requestAnimationFrame(animate);
+      }
+      requestAnimationFrame(animate);
+    }
+  </script>
+</body>
+</html>

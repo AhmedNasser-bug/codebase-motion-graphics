@@ -7,7 +7,7 @@ description: Creates continuously-animated, per-project-styled motion graphics v
 
 Turn codebases, software products, pitches, and web platforms into **real motion graphics**: components move, 3D wireframe tunnels drift, service meshes rotate, and kinetic typography grabs attention every second of the video.
 
-> **The Non-Negotiable Motion Law:** No static holds. No stretch longer than **1.5 seconds** may be visually frozen. Every scene requires an always-on motion layer (3D Three.js tunnel, p5 generative flow field, Framer Motion spring physics, floating particles). Render **every frame** with parallel GPU workers.
+> **The Non-Negotiable Motion Law:** No static holds. No stretch longer than **0.5 seconds** may be visually frozen. Every scene requires an always-on motion layer (3D Three.js tunnel, p5 generative flow field, Framer Motion spring physics, floating particles). Render **every frame** with parallel GPU workers.
 
 ---
 
@@ -23,44 +23,74 @@ Turn codebases, software products, pitches, and web platforms into **real motion
 
 ---
 
-## The 7 Production Categories / Sub-Modes
+## Strict Anti-Repetition Rules & Reality Mandate
 
-When initializing a motion project, identify or ask for the target sub-category:
+Algorithmic motion generation must never suffer from template incest. Adhere strictly to the Anti-Cliché Rubric:
 
-### 1. `mode: pitch` — Pitching Businesses & Products
-* **Objective:** Investor pitch decks, startup launch presentations, ROI/traction showcases, and value proposition narratives.
-* **Aesthetic:** High-contrast executive elegance, clean metric callouts, market size comparisons, and revenue trajectory graphs.
-* **Key Visuals:** Dynamic counter tickers, capital efficiency meters, client logo cascades, and animated problem-to-solution matrices.
+1. **Zero Faux-Browser Rectangles:**
+   In **Mode 5 (Software Demo)**, never use flat 2D `ctx.fillRect` with three colored dots or crude SVG line art to fake an application frame. Mode 5 strictly mandates photorealistic 3D hardware staging (`macbook_3d_template.html` or `mobile_device_template.html`).
+2. **Asset Authenticity (App Reality):**
+   Mandatory ingestion of real application UI screenshots or screencasts using `capture_live_screen.mjs`. Never use synthetic fake wireframes, lorem ipsum filler, or placeholder mockups when live endpoints exist.
+3. **PBR Skeuomorphic Depth:**
+   3D hardware rigs must employ dual-layer PBR materials (`MeshPhysicalMaterial` with `clearcoat: 1.0`, `clearcoatRoughness: 0.04`, calibrated metalness/roughness, and dynamic GLSL sheen sweeps) and soft contact shadows.
+4. **Anisotropic Filtering Mandate:**
+   All screen textures rendered at oblique camera perspective angles must set `texture.anisotropy = 16` (or `renderer.capabilities.getMaxAnisotropy()`) to guarantee razor-sharp text and UI legibility.
+5. **Continuous Micro-Motion Continuity:**
+   Static holds $> 0.5\text{s}$ are strictly prohibited. Devices must feature continuous gyroscopic pitch oscillations, camera breathing drift, or cursor interactions.
 
-### 2. `mode: codebase` — Understanding Codebases
-* **Objective:** Deep technical onboarding, architectural layer tours, and security/data flow explainers.
-* **Aesthetic:** Terminal ergonomics, cybernetic blueprints, syntax-highlighted code streams, and system topology maps.
-* **Key Visuals:** AST tree branching, RPC service call packets, database schema joins, and API lifecycle pipelines.
+---
 
-### 3. `mode: web-bg` — Web Background Video Assets (Portfolio & Hero Sections)
-* **Objective:** Seamless, ambient, looping background videos designed to sit behind website hero text (`<video autoplay loop muted playsinline>`).
-* **Inspirations:**
-  * **Hive Germany Showcase:** Deep obsidian tunnel of tumbling 3D wireframe cubes with coral/peach outlines, perspective vortex, and geometric depth.
-  * **Holographic 3D Cards / Studio:** Suspended badges with holographic iridescent foil reflections, soft ambient occlusion, and subtle inertia drift.
-* **Key Constraint:** Must have zero distracting abrupt jumps, low contrast in text zones, and perfect looping continuity between $t = 0$ and $t = \text{end}$.
+## Authoritative 9-Dimensional Mode Divergence Matrix
 
-### 4. `mode: ad` — Making Stunning Commercial Ads
-* **Objective:** High-energy social media ads, launch teasers, and billboard videos that capture attention within 0.5 seconds.
-* **Aesthetic:** Maximalist kinetic typography, massive text scale contrasts (Hive-style display type), flash frames, chromatic aberration, and punchy transitions.
-* **Key Visuals:** Bold one-word impact cuts, rhythmic camera zooms, high-voltage accent strikes, and compelling CTA finales.
+Every production category must maintain an unmistakable, distinct architectural identity:
 
-### 5. `mode: software-ad` — Software, Web App & Mobile App Ads
-* **Objective:** High-converting product commercials, SaaS promos, and cross-platform (Web + iOS + Android) showcases.
-* **Aesthetic:** Realistic 3D device mockups (MacBook, iPhone, clean browser viewport) floating with gentle perspective tilt.
-* **Key Visuals:** Screencast compositing, cursor clicks, smooth feature zoom-ins, toggle interactions, and dark/light mode morphing.
+| Production Dimension | Mode 5: Software Demo (`mode: software-ad`) | Mode 2 / 6: Tutorial & Walkthrough (`mode: tutorial` / `codebase`) | Mode 4: Commercial Ad (`mode: ad`) |
+|---|---|---|---|
+| **1. Primary Visual Rig** | **Photorealistic 3D Device (MacBook Pro 16" / iPhone 16 Pro) in Studio Lighting** | **Clean 2D Desktop Viewport with Magnification Spotlight & Step Badges** | **Massive Kinetic Typography, Holographic Cards & Shockwave Bursts** |
+| **2. Asset Authenticity** | **Real production screencasts, authentic workflows, real data (e.g., finals-qb.vercel.app)** | Real UI with pedagogical overlay tooltips, step highlights, and cursor trails | High-impact conceptual graphics, bold metrics ($+340\%$), and slogan type |
+| **3. Framing & Viewport** | 3D floating perspective tilt ($25^\circ$), unibody bevels, screen gloss sheen | Orthographic front-facing container with dark rounded window chrome | Full-screen canvas dynamic layouts, split-screen diagonal grids |
+| **4. Pacing & Cut Frequency**| Smooth, continuous 3-act choreography ($2.5\text{s} - 4.5\text{s}$ per workflow sequence) | Step-by-step instructional pacing ($3.0\text{s} - 5.0\text{s}$ per numbered step) | Hyper-kinetic rapid cuts ($0.3\text{s} - 0.8\text{s}$ per flash card/phrase) |
+| **5. Camera Kinematics** | Macro unibody sweep $\to$ Isometric orbit $\to$ Screen push-in | Smooth 2.5x cursor zoom-in, pan along UI elements, reset | Hard rhythmic zooms, Dutch angle rotations, kinetic screen shakes |
+| **6. Cursor & Interaction**| Tactile vector pointer with hover scale and hydrodynamic click waves | Spotlight focus circle ($r = 140\text{px}$), step badges, click ripples | Zero cursor (pure kinetic visual communication) |
+| **7. Motion Physics** | Damped harmonic spring physics ($k = 140, c = 15$) with organic settle | Smooth easeInOutCubic with steady pedagogical tracking | Explosive punch springs ($k = 320, c = 9$) with high overshoot |
+| **8. Atmosphere / Backdrop**| Deep charcoal/obsidian cyclorama (`#090a0f`) with soft studio light cards | Minimalist architectural dot grid with progressive step timeline header | Cybernetic wireframe vortex, particle fields, chromatic glow surges |
+| **9. Rubric Pillar Focus** | **Pillar 1 (App Reality: 25 pts) + Pillar 2 (Device Staging: 25 pts)** | **Pillar 1 (Workflow Authenticity) + Pillar 5 (Cognitive Flow & Clarity)** | **Pillar 4 (Dynamic Choreography) + Pillar 5 (0.8s Magnetic Hook)** |
 
-### 6. `mode: tutorial` — Tutorial Motion Graphics Videos (Product & Educational Walkthroughs)
-* **Objective:** Step-by-step user onboarding, educational walkthroughs, how-to guides, and feature workflows.
-* **Aesthetic:** Crystal-clear pedagogical clarity, numbered step badges ("Step 1", "Step 2", "Step 3"), spotlight callout masks, and smooth zooming.
-* **Key Visuals:** Animated mouse cursor with click ripple waves, UI spotlight focus masks, progressive breadcrumb timeline, tooltips with spring bounce, and verified success badges.
+---
 
-### 7. `mode: general` — General Procedural Motion Graphics
-* **Objective:** Mathematical visualizations, abstract branding identities, and procedural motion experiments.
+## 3D Hardware Device Staging Templates & CLI Tools
+
+### 1. Automated Playwright Live Screen Capture (`scripts/capture_live_screen.mjs`)
+Captures pixel-perfect, high-DPI screenshots from live production URLs for 3D device staging.
+
+```bash
+# Capture Desktop Screen (1920x1080 @2x Retina)
+node scripts/capture_live_screen.mjs https://finals-qb.vercel.app scripts/templates/assets/finals_qb_desktop.png --width 1920 --height 1080 --delay 1000
+
+# Capture Mobile Screen (iPhone 16 Pro 393x852 @3x)
+node scripts/capture_live_screen.mjs https://finals-qb.vercel.app scripts/templates/assets/finals_qb_mobile.png --mobile --delay 1000
+```
+* **Features:**
+  * Uses `playwright-core` with automatic system browser discovery (Chrome/Edge/Chromium).
+  * Auto-waits for `networkidle` and web fonts (`document.fonts.ready`).
+  * Automatically injects CSS to hide scrollbars, cookie banners, and consent dialogs.
+  * Exports lossless, high-DPI PNGs.
+
+### 2. MacBook Pro 16" 3D Template (`scripts/templates/macbook_3d_template.html`)
+* **Hardware Rig:** Procedural Three.js extruded aluminum unibody, articulated display lid, recessed keyboard deck with 84 instanced keycaps, frosted glass trackpad, camera notch pill, and chamfered edges.
+* **Dual-Layer PBR Materials:** Anodized Space Black aluminum base with clearcoat gloss overlay, physically accurate IOR (1.52), and dynamic GLSL sheen sweep shader.
+* **Synchronous Backing Store:** Built-in `ScreenCanvasBackingStore` ($2560 \times 1600$) with simulated macOS window chrome, vector arrow cursor, and expanding click ripples.
+* **Anisotropic Filtering:** Pre-configured with `texture.anisotropy = 16` for razor-sharp text legibility at steep perspective angles.
+* **Texture Ingestion:** Loads `assets/finals_qb_desktop.png` or query parameter `?screen=path/to/image.png` with automatic procedural UI fallback.
+* **Render Fast-Path:** Renders directly to `<canvas id="c" width="1920" height="1080">` with `preserveDrawingBuffer: true` and deterministic `window.seekTo(t)`.
+
+### 3. iPhone 16 Pro 3D Mobile Template (`scripts/templates/mobile_device_template.html`)
+* **Hardware Rig:** Procedural Three.js Grade 5 brushed titanium chassis, 1.2mm ultra-slim bezel, floating Dynamic Island sensor capsule, and rear triple sapphire camera cluster.
+* **Dual-Layer PBR Materials:** Natural Titanium perimeter, Ceramic Shield screen glass, dynamic reflection sheen sweep, and contact shadow floor.
+* **Synchronous Mobile Backing Store:** $1179 \times 2556$ (19.5:9 aspect ratio) canvas with iOS status bar (9:41, battery, cellular), iOS home indicator, and interactive touch ripple rings.
+* **Anisotropic Filtering:** `texture.anisotropy = 16`.
+* **Texture Ingestion:** Loads `assets/finals_qb_mobile.png` or `?screen=path/to/image.png` with procedural fallback.
+* **Render Fast-Path:** Renders directly to `<canvas id="c">` with `preserveDrawingBuffer: true` and deterministic `window.seekTo(t)`.
 
 ---
 
@@ -68,45 +98,47 @@ When initializing a motion project, identify or ask for the target sub-category:
 
 ```mermaid
 flowchart LR
-  A[User Prompt / Request] --> B[Phase 1: Select Mode & Recon]
-  B --> C[Phase 2: Extract Tokens & StitchMCP Assets]
-  B --> D[Phase 3: Select Library Framer Motion / Three.js / p5]
+  A[User Prompt / Request] --> B[Phase 1: Select Mode & Divergence Matrix]
+  B --> C[Phase 2: Ingest Real Assets via capture_live_screen.mjs]
+  C --> D[Phase 3: Select Library & 3D Staging Template]
   D --> E[Phase 4: Build storyboard.html with seekTo t]
   E --> F[Phase 5: GPU render_parallel.mjs]
   F --> G[Phase 6: motion_gate.mjs QA]
-  G -->|Pass| H[Deliver 1080p MP4 + Report]
+  G -->|Pass| H[Deliver 1080p MP4 + Audit Report]
   G -->|Fail| E
 ```
 
-### Phase 1: Interview & Mode Selection
-Confirm the production mode:
-* `1` Pitching businesses/products
-* `2` Understanding codebases
-* `3` Web background video asset
-* `4` Stunning commercial ad
-* `5` Software / app demo
-* `6` Tutorial motion graphics (step-by-step educational guide)
-* `7` General
+### Phase 1: Mode Selection & Divergence Gate
+Select mode according to the 9-dimensional Mode Divergence Matrix:
+* `mode: pitch` — Business pitch & traction metrics
+* `mode: codebase` — Technical architecture & AST topologies
+* `mode: web-bg` — Ambient hero background looping video
+* `mode: ad` — Kinetic typography & high-impact commercial cuts
+* `mode: software-ad` — Photorealistic 3D MacBook / iPhone device staging with real app captures
+* `mode: tutorial` — Step-by-step educational guide with spotlight masks & step badges
+* `mode: general` — Procedural motion & algorithmic art
 
-### Phase 2: Design System & Assets
-* Query `StitchMCP` to extract typography, colors, and generate missing UI screens.
-* Prepare `design-system.json` detailing color tokens, fonts, and motion character.
+### Phase 2: Live Asset Ingestion
+For software demos and product walkthroughs, execute `capture_live_screen.mjs` against target URL to populate `assets/` with crisp PNGs.
 
 ### Phase 3: Storyboard Authoring (`storyboard.html`)
-* Use standard templates from `scripts/templates/`:
-  * `tutorial_storyboard_template.html` (Mode 6: Step-by-step tutorial with animated cursor, UI spotlight, and progress bar)
-  * `framer_motion_template.html` (Framer Motion spring physics + DOM components)
-  * `hive_3d_tunnel_bg_template.html` (Mode 3: Three.js wireframe geometric tunnel)
-  * `holographic_cards_template.html` (3D floating perspective cards)
-  * `threejs_storyboard_template.html` (3D cluster topologies)
-  * `p5_storyboard_template.html` (p5.js generative flow fields)
-* Every storyboard exposes `window.seekTo = function(t)` where $t$ is the elapsed seconds.
+Select the appropriate production template:
+* `macbook_3d_template.html` (Mode 5: 3D MacBook Pro 16" software demo)
+* `mobile_device_template.html` (Mode 5: 3D iPhone 16 Pro mobile app demo)
+* `tutorial_storyboard_template.html` (Mode 6: Step-by-step tutorial with animated cursor and UI spotlight)
+* `framer_motion_template.html` (Framer Motion spring physics + DOM components)
+* `hive_3d_tunnel_bg_template.html` (Mode 3: Three.js wireframe geometric tunnel)
+* `holographic_cards_template.html` (3D floating perspective cards)
+* `threejs_storyboard_template.html` (3D cluster topologies)
+* `p5_storyboard_template.html` (p5.js generative flow fields)
+
+Every storyboard MUST expose `window.seekTo = function(t)` where $t$ is elapsed seconds.
 
 ### Phase 4: Discrete GPU Parallel Render
 ```bash
 node scripts/render_parallel.mjs storyboard.html output.mp4 20 30 1920 1080 3
 ```
-* Employs Chromium ANGLE Direct3D11 on NVIDIA discrete GPU.
+* Employs Chromium ANGLE Direct3D11 on discrete GPU.
 * In-page canvas JPEG streaming piped directly to `ffmpeg -c:v h264_nvenc`.
 * Renders 600 frames (20s @ 1080p30) in **~24–28s**.
 
@@ -115,12 +147,13 @@ node scripts/render_parallel.mjs storyboard.html output.mp4 20 30 1920 1080 3
 node scripts/motion_gate.mjs output.mp4
 ```
 * Must pass:
-  1. Maximum static stretch $\le 1.5\text{s}$.
-  2. Frozen frame percentage $< 10\%$.
+  1. Maximum static stretch $\le 0.5\text{s}$.
+  2. Frozen frame percentage $< 5\%$.
+  3. Valid $1920 \times 1080$ frame dimensions at continuous framerate.
 
 ---
 
 ## Process Hygiene
-* Kill child processes upon completion.
-* Proactively audit tasks with `manage_task list`.
-* Clean temporary segment files.
+* Always terminate child processes upon task completion.
+* Close all browser contexts in `finally` blocks.
+* Clean up temporary segment files after rendering.
