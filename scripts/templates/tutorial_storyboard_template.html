@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tutorial Motion Graphics Template (Mode 6)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #080c14;
+    overflow: hidden;
+    width: 1920px;
+    height: 1080px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  canvas {
+    display: block;
+    width: 1920px;
+    height: 1080px;
+  }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+// --- Physics & Math Helpers ---
+function spring(t, delay, stiffness = 140, damping = 12) {
+  const elapsed = Math.max(0, t - delay);
+  if (elapsed <= 0) return 0;
+  const decay = Math.exp(-damping * elapsed);
+  return 1 - decay * Math.cos(Math.sqrt(stiffness) * elapsed);
+}
+
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+function easeInOut(t) {
+  return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+}
+
+// Global Theme Palette
+const PALETTE = {
+  bg: '#080d1a',
+  surface: '#0f172a',
+  surfaceBorder: '#1e293b',
+  accent: '#38bdf8',       // Cyan primary
+  accentAlt: '#818cf8',    // Indigo secondary
+  success: '#10b981',      // Emerald verification
+  gold: '#fbbf24',
+  text: '#f8fafc',
+  textMuted: '#94a3b8'
+};
+
+// Continuous Background Grid & Ambient Particle Drift
+const particles = [];
+for (let i = 0; i < 40; i++) {
+  particles.push({
+    x: (i * 47) % 1920,
+    y: (i * 73) % 1080,
+    vx: 15 + (i % 5) * 8,
+    vy: -10 - (i % 4) * 6,
+    r: 1.5 + (i % 3) * 1.5,
+    alpha: 0.15 + (i % 5) * 0.1
+  });
+}
+
+function drawBackground(t) {
+  ctx.fillStyle = PALETTE.bg;
+  ctx.fillRect(0, 0, 1920, 1080);
+
+  // Subtle animated grid
+  ctx.save();
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.05)';
+  ctx.lineWidth = 1;
+  const gridOffset = (t * 20) % 60;
+  for (let x = 0; x < 1920; x += 60) {
+    ctx.beginPath();
+    ctx.moveTo(x + gridOffset, 0);
+    ctx.lineTo(x + gridOffset, 1080);
+    ctx.stroke();
+  }
+  for (let y = 0; y < 1080; y += 60) {
+    ctx.beginPath();
+    ctx.moveTo(0, y + gridOffset);
+    ctx.lineTo(1920, y + gridOffset);
+    ctx.stroke();
+  }
+
+  // Floating particles
+  for (let p of particles) {
+    const px = (p.x + p.vx * t) % 1920;
+    const py = (p.y + p.vy * t + 108000) % 1080;
+    ctx.fillStyle = `rgba(56, 189, 248, ${p.alpha})`;
+    ctx.beginPath();
+    ctx.arc(px, py, p.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // Bottom Continuous Motion Ticker (Guarantees zero static freeze)
+  ctx.fillStyle = '#0b1324';
+  ctx.fillRect(0, 1040, 1920, 40);
+  ctx.fillStyle = PALETTE.accent;
+  ctx.font = '700 15px Consolas, monospace';
+  const tickerMsg = '★ TUTORIAL WALKTHROUGH • STEP-BY-STEP USER GUIDE • INTERACTIVE ONBOARDING • SPRING PHYSICS • ';
+  const tx = -(t * 180) % 900;
+  ctx.fillText(tickerMsg.repeat(4), tx, 1065);
+}
+
+// Step Timeline Header
+function drawTimeline(t, currentStep, totalSteps, titles) {
+  ctx.save();
+  const barY = 50;
+  const barW = 1200;
+  const startX = (1920 - barW) / 2;
+
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+  ctx.fillRect(startX - 20, barY - 20, barW + 40, 80);
+  ctx.strokeStyle = PALETTE.surfaceBorder;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(startX - 20, barY - 20, barW + 40, 80);
+
+  const segmentW = barW / (totalSteps - 1);
+  for (let i = 0; i < totalSteps - 1; i++) {
+    const x1 = startX + i * segmentW;
+    const x2 = x1 + segmentW;
+    
+    // Background track
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(x1, barY + 20);
+    ctx.lineTo(x2, barY + 20);
+    ctx.stroke();
+
+    // Active fill based on step progression
+    if (currentStep > i) {
+      const fillProgress = clamp((currentStep - i), 0, 1);
+      ctx.strokeStyle = PALETTE.accent;
+      ctx.beginPath();
+      ctx.moveTo(x1, barY + 20);
+      ctx.lineTo(x1 + segmentW * fillProgress, barY + 20);
+      ctx.stroke();
+    }
+  }
+
+  // Draw Step Nodes
+  for (let i = 0; i < totalSteps; i++) {
+    const nx = startX + i * segmentW;
+    const ny = barY + 20;
+    const isCompleted = currentStep > i;
+    const isActive = Math.floor(currentStep) === i;
+
+    ctx.fillStyle = isCompleted ? PALETTE.success : (isActive ? PALETTE.accent : '#1e293b');
+    ctx.beginPath();
+    ctx.arc(nx, ny, isActive ? 18 : 14, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = isActive ? '#ffffff' : PALETTE.surfaceBorder;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '800 14px "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(i + 1, nx, ny);
+
+    // Title label
+    ctx.font = isActive ? '700 16px "Segoe UI", sans-serif' : '500 14px "Segoe UI", sans-serif';
+    ctx.fillStyle = isActive ? PALETTE.accent : PALETTE.textMuted;
+    ctx.fillText(titles[i], nx, ny + 32);
+  }
+  ctx.restore();
+}
+
+// Animated Virtual Cursor & Click Wave
+function drawCursor(x, y, isClicking, clickProgress) {
+  ctx.save();
+  ctx.translate(x, y);
+
+  // Click shockwave
+  if (isClicking) {
+    const r = clickProgress * 40;
+    const a = (1 - clickProgress) * 0.8;
+    ctx.strokeStyle = `rgba(56, 189, 248, ${a})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Pointer icon
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(0, 26);
+  ctx.lineTo(7, 20);
+  ctx.lineTo(15, 30);
+  ctx.lineTo(19, 27);
+  ctx.lineTo(11, 17);
+  ctx.lineTo(21, 17);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+// Master seekTo function for Playwright render
+window.seekTo = function(t) {
+  drawBackground(t);
+  // Example 3-step tutorial timing:
+  // Step 1: 0 - 5s
+  // Step 2: 5 - 10s
+  // Step 3: 10 - 15s
+  const currentStep = clamp(t / 5, 0, 3);
+  drawTimeline(t, currentStep, 3, ['SELECT SUBJECT', 'ADAPTIVE DRILL', 'INSTANT MASTERY']);
+  
+  // Custom scenes render here
+};
+
+window.seekTo(0);
+</script>
+</body>
+</html>

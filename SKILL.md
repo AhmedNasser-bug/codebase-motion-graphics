@@ -23,7 +23,7 @@ Turn codebases, software products, pitches, and web platforms into **real motion
 
 ---
 
-## The 6 Production Categories / Sub-Modes
+## The 7 Production Categories / Sub-Modes
 
 When initializing a motion project, identify or ask for the target sub-category:
 
@@ -50,11 +50,16 @@ When initializing a motion project, identify or ask for the target sub-category:
 * **Key Visuals:** Bold one-word impact cuts, rhythmic camera zooms, high-voltage accent strikes, and compelling CTA finales.
 
 ### 5. `mode: software-ad` — Software, Web App & Mobile App Ads
-* **Objective:** Feature walkthroughs, SaaS product demos, and cross-platform (Web + iOS + Android) showcases.
+* **Objective:** High-converting product commercials, SaaS promos, and cross-platform (Web + iOS + Android) showcases.
 * **Aesthetic:** Realistic 3D device mockups (MacBook, iPhone, clean browser viewport) floating with gentle perspective tilt.
 * **Key Visuals:** Screencast compositing, cursor clicks, smooth feature zoom-ins, toggle interactions, and dark/light mode morphing.
 
-### 6. `mode: general` — General Procedural Motion Graphics
+### 6. `mode: tutorial` — Tutorial Motion Graphics Videos (Product & Educational Walkthroughs)
+* **Objective:** Step-by-step user onboarding, educational walkthroughs, how-to guides, and feature workflows.
+* **Aesthetic:** Crystal-clear pedagogical clarity, numbered step badges ("Step 1", "Step 2", "Step 3"), spotlight callout masks, and smooth zooming.
+* **Key Visuals:** Animated mouse cursor with click ripple waves, UI spotlight focus masks, progressive breadcrumb timeline, tooltips with spring bounce, and verified success badges.
+
+### 7. `mode: general` — General Procedural Motion Graphics
 * **Objective:** Mathematical visualizations, abstract branding identities, and procedural motion experiments.
 
 ---
@@ -65,7 +70,7 @@ When initializing a motion project, identify or ask for the target sub-category:
 flowchart LR
   A[User Prompt / Request] --> B[Phase 1: Select Mode & Recon]
   B --> C[Phase 2: Extract Tokens & StitchMCP Assets]
-  C --> D[Phase 3: Select Library Framer Motion / Three.js / p5]
+  B --> D[Phase 3: Select Library Framer Motion / Three.js / p5]
   D --> E[Phase 4: Build storyboard.html with seekTo t]
   E --> F[Phase 5: GPU render_parallel.mjs]
   F --> G[Phase 6: motion_gate.mjs QA]
@@ -80,7 +85,8 @@ Confirm the production mode:
 * `3` Web background video asset
 * `4` Stunning commercial ad
 * `5` Software / app demo
-* `6` General
+* `6` Tutorial motion graphics (step-by-step educational guide)
+* `7` General
 
 ### Phase 2: Design System & Assets
 * Query `StitchMCP` to extract typography, colors, and generate missing UI screens.
@@ -88,8 +94,9 @@ Confirm the production mode:
 
 ### Phase 3: Storyboard Authoring (`storyboard.html`)
 * Use standard templates from `scripts/templates/`:
+  * `tutorial_storyboard_template.html` (Mode 6: Step-by-step tutorial with animated cursor, UI spotlight, and progress bar)
   * `framer_motion_template.html` (Framer Motion spring physics + DOM components)
-  * `hive_3d_tunnel_bg_template.html` (Three.js wireframe geometric tunnel)
+  * `hive_3d_tunnel_bg_template.html` (Mode 3: Three.js wireframe geometric tunnel)
   * `holographic_cards_template.html` (3D floating perspective cards)
   * `threejs_storyboard_template.html` (3D cluster topologies)
   * `p5_storyboard_template.html` (p5.js generative flow fields)
